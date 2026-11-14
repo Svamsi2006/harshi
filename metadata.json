@@ -1,0 +1,6 @@
+{
+  "name": "varniks_atelier",
+  "description": "Independent artist studio offering original pencil and charcoal sketches, handmade terracotta crafts, paintings, and archival art prints.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
