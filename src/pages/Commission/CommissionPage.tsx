@@ -69,7 +69,7 @@ export const CommissionPage: React.FC = () => {
 
     setError('');
     const reqId = `COM-${Math.floor(1000 + Math.random() * 8999)}`;
-    storeService.saveCommissionRequest({
+    const newReq = {
       id: reqId,
       customerName: customerName.trim(),
       email: email.trim(),
@@ -80,8 +80,15 @@ export const CommissionPage: React.FC = () => {
       budgetRange,
       referenceImageName: referenceName || undefined,
       description: description.trim(),
+      status: 'New' as const,
       submittedAt: new Date().toISOString(),
-    });
+    };
+    storeService.saveCommissionRequest(newReq);
+    void fetch('/api/commissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReq),
+    }).catch(() => {});
     setSubmittedId(reqId);
     addToast('Commission request received', 'We will reply within 24–48 hours.', 'success');
   };

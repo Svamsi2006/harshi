@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ShoppingBag, Zap, ShieldCheck, Package, Sparkles } from 'lucide-react';
-import { PRODUCTS, getProductBySlug } from '../../data/products';
 import { formatINR } from '../../utils/format';
 import { useStore } from '../../context/StoreContext';
 import { PageTransition } from '../../components/common/PageTransition';
@@ -16,8 +15,8 @@ import { ProductGrid } from '../../components/product/ProductGrid';
 export const ProductDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useStore();
-  const product = slug ? getProductBySlug(slug) : undefined;
+  const { products, addToCart } = useStore();
+  const product = slug ? products.find((p) => p.slug === slug) : undefined;
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
@@ -38,7 +37,7 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  const related = PRODUCTS.filter(
+  const related = products.filter(
     (p) => p.id !== product.id && (p.category === product.category || p.routeGroup === product.routeGroup)
   ).slice(0, 4);
 

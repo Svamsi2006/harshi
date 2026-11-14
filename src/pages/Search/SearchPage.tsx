@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
-import { PRODUCTS } from '../../data/products';
 import { useStore } from '../../context/StoreContext';
 import { PageTransition } from '../../components/common/PageTransition';
 import { ProductGrid } from '../../components/product/ProductGrid';
@@ -10,14 +9,14 @@ export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [input, setInput] = useState(initialQuery);
-  const { addRecentSearch } = useStore();
+  const { products, addRecentSearch } = useStore();
 
   const activeQuery = (searchParams.get('q') ?? '').trim();
 
   const results = useMemo(() => {
-    if (!activeQuery) return PRODUCTS;
+    if (!activeQuery) return products;
     const q = activeQuery.toLowerCase();
-    return PRODUCTS.filter(
+    return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.subtitle.toLowerCase().includes(q) ||
@@ -25,7 +24,7 @@ export const SearchPage: React.FC = () => {
         p.categoryLabel.toLowerCase().includes(q) ||
         p.medium.toLowerCase().includes(q)
     );
-  }, [activeQuery]);
+  }, [activeQuery, products]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

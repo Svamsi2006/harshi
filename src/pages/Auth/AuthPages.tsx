@@ -48,7 +48,11 @@ export const LoginPage: React.FC = () => {
       setError(res.error || 'Unable to sign in.');
       return;
     }
-    navigate('/account');
+    if (res.user?.role === 'owner') {
+      navigate('/admin');
+    } else {
+      navigate('/account');
+    }
   };
 
   return (
@@ -139,6 +143,15 @@ export const LoginPage: React.FC = () => {
           <Sparkles className="w-3.5 h-3.5 text-[#C86D51]" />
           <span>Sign in with Demo Collector Account (Ananya)</span>
         </button>
+
+        <div className="text-center">
+          <Link
+            to="/admin/login"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#C86D51] hover:text-[#B2593E]"
+          >
+            <span>Studio Owner? Open Admin Login →</span>
+          </Link>
+        </div>
 
         <p className="text-center text-xs text-[#6E655F]">
           New to varniks_atelier?{' '}

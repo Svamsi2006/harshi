@@ -34,14 +34,18 @@ export interface Product {
   routeGroup: RouteCategorySlug;
   price: number;
   originalPrice?: number;
+  costPrice?: number;
+  sku?: string;
   images: string[];
   medium: string;
   dimensions: string;
   stock: number;
+  lowStockThreshold?: number;
   productType: ProductWorkType;
   availabilityLabel: 'In Stock' | 'Made to Order' | 'Last Piece';
   badge?: ProductBadgeType;
   isBestseller?: boolean;
+  isPublished?: boolean;
   createdAt: string;
   specifications: ProductSpecification;
 }
@@ -69,6 +73,7 @@ export interface CustomerUser {
   email: string;
   phone: string;
   joinedAt: string;
+  role?: 'customer' | 'owner';
 }
 
 export interface Address {
@@ -83,7 +88,7 @@ export interface Address {
   isDefault: boolean;
 }
 
-export type OrderStatus = 'Pending' | 'Packed' | 'Shipped' | 'Delivered';
+export type OrderStatus = 'Pending' | 'Confirmed' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Refunded';
 
 export type PaymentMethod = 'razorpay' | 'stripe';
 
@@ -100,6 +105,8 @@ export interface Order {
   id: string;
   orderNumber: string;
   customerId: string;
+  customerName?: string;
+  customerEmail?: string;
   date: string;
   items: OrderItem[];
   subtotal: number;
@@ -107,10 +114,11 @@ export interface Order {
   discount: number;
   total: number;
   paymentMethod: PaymentMethod;
-  paymentStatus: 'Paid' | 'Pending';
+  paymentStatus: 'Paid' | 'Pending' | 'Authorized' | 'Refunded';
   orderStatus: OrderStatus;
   shippingAddress: Omit<Address, 'id' | 'isDefault'>;
   trackingCode?: string;
+  courierName?: string;
   estimatedDelivery: string;
 }
 
@@ -125,7 +133,30 @@ export interface CommissionRequest {
   budgetRange: string;
   referenceImageName?: string;
   description: string;
+  status: 'New' | 'Reviewing' | 'Quoted' | 'Accepted' | 'In Progress' | 'Completed' | 'Rejected';
+  quotedPrice?: number;
+  internalNotes?: string;
   submittedAt: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minimumOrder: number;
+  isActive: boolean;
+  expiresAt?: string;
+}
+
+export interface StoreSettings {
+  storeName: string;
+  contactEmail: string;
+  contactPhone: string;
+  currency: string;
+  freeShippingThreshold: number;
+  defaultShippingFee: number;
+  announcementText: string;
 }
 
 export interface FilterState {

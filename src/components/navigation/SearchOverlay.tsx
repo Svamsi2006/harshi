@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, ArrowRight, Clock } from 'lucide-react';
-import { PRODUCTS } from '../../data/products';
 import { useStore } from '../../context/StoreContext';
 import { formatINR } from '../../utils/format';
 import { ResilientImage } from '../common/ResilientImage';
@@ -15,7 +14,7 @@ const POPULAR_CATEGORIES = [
 ];
 
 export const SearchOverlay: React.FC = () => {
-  const { isSearchOpen, closeSearch, recentSearches, addRecentSearch, clearRecentSearches } =
+  const { products, isSearchOpen, closeSearch, recentSearches, addRecentSearch, clearRecentSearches } =
     useStore();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,14 +40,14 @@ export const SearchOverlay: React.FC = () => {
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return PRODUCTS.filter(
+    return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.subtitle.toLowerCase().includes(q) ||
         p.categoryLabel.toLowerCase().includes(q) ||
         p.medium.toLowerCase().includes(q)
     ).slice(0, 5);
-  }, [query]);
+  }, [products, query]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
-import { PRODUCTS } from '../data/products';
 import type { FilterState, Product } from '../types';
+import { useStore } from '../context/StoreContext';
 
 export function useFilteredProducts(
   filters: FilterState,
   routeGroup?: Product['routeGroup']
 ): Product[] {
+  const { products } = useStore();
+
   return useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products].filter((p) => p.isPublished !== false);
 
     if (routeGroup) {
       list = list.filter((p) => p.routeGroup === routeGroup);
@@ -56,5 +58,5 @@ export function useFilteredProducts(
     }
 
     return list;
-  }, [filters, routeGroup]);
+  }, [filters, products, routeGroup]);
 }

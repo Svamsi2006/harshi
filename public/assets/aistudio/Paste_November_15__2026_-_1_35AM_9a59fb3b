@@ -1,0 +1,3030 @@
+# **VARNIKS_ATELIER — Part 2: Owner Admin Dashboard + Supabase Backend**
+
+PART 2
+
+Full-stack implementation
+
+Supabase PostgreSQL
+
+**This phase turns the Part 1 storefront into a complete, manageable e-commerce business.**
+
+The objective is to build a private, single-owner **Mini-Shopify system** where you can control the entire VARNIKS_ATELIER store without touching the source code every time you want to upload a painting, change a price, update stock, or process an order.
+
+[InRetail - Inventory SAAS Dashboard by Harsh Advani | UI UX Designer on Dribbble](https://images.openai.com/static-rsc-4/waZqMh70LiKNs9XZ8tsIwvZAJ0l57qtZ7556OvPTeJgut0i5lt0XoXwPSy4oYDohem_YcwZm-O3l-VeSmACzk9Eb2VJnqPZAFCCCRZlR81peNSfrQImIj25uYjdlbbgthZJvgPfYStALBci0lro7tVSzjn8hvV7QRj57iCmuXyw?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/27225264-InRetail-Inventory-SAAS-Dashboard?utm_source=chatgpt.com)
+
+Visual direction: warm editorial admin dashboard, consistent with the storefront rather than a generic dark SaaS dashboard.
+
+## **1. Architecture and how everything connects**
+
+**VARNIKS_ATELIER CUSTOMER STOREFRONT**
+
+Part 1 · Shopping, accounts, carts, checkout
+
+Secure API and authentication
+
+**SUPABASE BACKEND**
+
+**PostgreSQL**
+
+Data and relationships
+
+**Supabase Auth**
+
+Login and identity
+
+**Storage**
+
+Artwork and uploads
+
+**Edge Functions**
+
+Secure business logic
+
+**PRIVATE OWNER ADMIN DASHBOARD**
+
+Part 2 · Products, inventory, orders, customers, analytics, settings
+
+**Recommended architecture:**
+
+- Frontend: React + TypeScript + Tailwind CSS + Framer Motion.
+- Backend: Supabase.
+- Database: Supabase PostgreSQL.
+- Authentication: Supabase Auth.
+- Artwork: Supabase Storage.
+- Secure server operations: Supabase Edge Functions.
+- Payments: Razorpay initially, Stripe as an optional later integration.
+- Charts: Recharts.
+- Icons: Lucide React.
+
+The admin dashboard and customer storefront must use the same database. Changes made by the owner should automatically appear on the storefront without manually editing frontend files.
+
+# **Part 2A — Complete agent-ready PRD**
+
+# PRODUCT REQUIREMENTS DOCUMENT
+
+# VARNIKS_ATELIER
+
+## PART 2 — OWNER ADMIN DASHBOARD, SUPABASE BACKEND & MINI-SHOPIFY MANAGEMENT SYSTEM
+
+**Product:** VARNIKS_ATELIER\
+**System Type:** Single-Owner E-Commerce Management Platform\
+**Phase:** Part 2\
+**Backend:** Supabase\
+**Database:** PostgreSQL\
+**Frontend:** React + TypeScript\
+**Architecture:** Single-Vendor, Single-Owner\
+**Development Target:** Cursor, Windsurf, Claude Code, Antigravity, Bolt and other AI coding agents.
+
+---
+
+# 1. PROJECT OBJECTIVE
+
+Extend the existing Part 1 customer storefront into a complete full-stack e-commerce platform.
+
+Build a private owner dashboard that allows the store owner to manage every aspect of the business from one place.
+
+The owner must be able to:
+
+1. Upload and manage products.
+2. Upload multiple artwork images.
+3. Manage product categories.
+4. Update product prices.
+5. Manage stock and inventory.
+6. Receive and process customer orders.
+7. Update delivery statuses.
+8. View and manage customers.
+9. Manage custom artwork commissions.
+10. Track revenue and sales.
+11. Manage coupons and discounts.
+12. Edit storefront content.
+13. Manage shipping and store policies.
+14. Manage newsletter subscribers.
+15. View sales and business analytics.
+16. Configure payment and delivery settings.
+17. Receive notifications about important store activities.
+
+All management operations must connect to Supabase.
+
+This must be a real functional management system, not a static dashboard with sample numbers.
+
+# 2. IMPORTANT DEVELOPMENT RULES
+
+## 2.1 Continue Part 1
+
+Before starting:
+
+- Inspect the existing Part 1 source code.
+- Identify the current framework and component structure.
+- Inspect existing routes.
+- Reuse the existing color palette, typography, logo and design tokens.
+- Preserve all existing customer-facing pages.
+- Integrate Supabase into the existing application.
+- Avoid rebuilding the storefront from scratch.
+
+The Part 1 storefront and Part 2 dashboard must operate as one application.
+
+## 2.2 Admin Access
+
+This is a single-owner platform.
+
+There must be:
+
+- One authorized store owner.
+- No public admin registration.
+- No customer access to admin routes.
+- No customer ability to promote themselves to admin.
+- No hardcoded frontend admin credentials.
+- No reliance on editable user metadata for admin privileges.
+
+Admin access must be controlled through a database-backed owner authorization record and verified through Supabase authentication and Row Level Security.
+
+Suggested routes:
+
+- `/admin/login`
+- `/admin`
+- `/admin/products`
+- `/admin/products/new`
+- `/admin/products/[id]/edit`
+- `/admin/categories`
+- `/admin/inventory`
+- `/admin/orders`
+- `/admin/orders/[id]`
+- `/admin/customers`
+- `/admin/customers/[id]`
+- `/admin/commissions`
+- `/admin/analytics`
+- `/admin/discounts`
+- `/admin/content`
+- `/admin/newsletter`
+- `/admin/settings`
+
+Unauthenticated users must be redirected to `/admin/login`.
+
+Authenticated customers without owner authorization must receive an access-denied response and must never see admin data.
+
+# 3. ADMIN DASHBOARD DESIGN SYSTEM
+
+## 3.1 Visual Direction
+
+The admin dashboard must visually belong to VARNIKS_ATELIER.
+
+Do not create a generic dark SaaS dashboard.
+
+Use the same artistic identity as the customer storefront.
+
+### Color Palette
+
+| Element         | Color   |
+| --------------- | ------- |
+| Background      | #FAF7F2 |
+| Sidebar         | #F3EDE2 |
+| Cards           | #FFFFFF |
+| Borders         | #EAE3D5 |
+| Primary text    | #2B2623 |
+| Muted text      | #6E655F |
+| Primary buttons | #C86D51 |
+| Button hover    | #B2593E |
+| Success         | #7A9178 |
+| Warning         | #E6B86A |
+| Error           | #B94F45 |
+
+### Typography
+
+- Headings: Fraunces.
+- Body: Plus Jakarta Sans.
+- Small artistic accents: Caveat.
+
+### Visual Style
+
+- Rounded cards.
+- Thin warm borders.
+- Soft shadows.
+- Subtle paper texture.
+- Minimal decorative illustrations.
+- Clean charts.
+- Consistent iconography.
+- Spacious layouts.
+
+The dashboard should feel like an artist's professional studio management workspace.
+
+## 3.2 Admin Layout
+
+Desktop layout:
+
+**Left Sidebar**
+
+- Brand logo.
+- Dashboard.
+- Products.
+- Categories.
+- Inventory.
+- Orders.
+- Customers.
+- Commissions.
+- Analytics.
+- Discounts.
+- Content.
+- Newsletter.
+- Settings.
+- Logout.
+
+**Top Navigation**
+
+- Page title.
+- Breadcrumbs.
+- Global search.
+- Notification icon.
+- Owner profile menu.
+
+**Main Content**
+
+- Page-specific dashboard.
+- Data tables.
+- Cards.
+- Charts.
+- Filters.
+- Action buttons.
+
+Mobile:
+
+- Collapsible sidebar.
+- Responsive top bar.
+- Drawer navigation.
+- Horizontally scrollable data tables or responsive card layouts.
+- Touch-friendly actions.
+
+# 4. ADMIN OVERVIEW DASHBOARD
+
+Route: `/admin`
+
+This is the first page shown after owner login.
+
+It must provide an immediate overview of business performance.
+
+## 4.1 KPI Cards
+
+Display:
+
+1. Total Revenue.
+2. Total Orders.
+3. Total Products.
+4. Total Customers.
+5. Pending Orders.
+6. Low Stock Products.
+
+Each card must show:
+
+- Current value.
+- Relevant comparison period.
+- Percentage change where meaningful.
+- Small visual trend.
+- Relevant icon.
+
+Never invent performance metrics. Calculate them from actual database records.
+
+## 4.2 Revenue Chart
+
+Create an interactive revenue chart.
+
+Filters:
+
+- Today.
+- Last 7 days.
+- Last 30 days.
+- Last 90 days.
+- This year.
+- Custom date range.
+
+Display:
+
+- Revenue over time.
+- Order count.
+- Average order value.
+
+Revenue calculations must use successfully paid orders, not merely created orders.
+
+## 4.3 Recent Orders
+
+Display the latest orders.
+
+Columns:
+
+- Order ID.
+- Customer.
+- Date.
+- Amount.
+- Payment status.
+- Order status.
+- Action.
+
+Clicking an order opens its detail page.
+
+## 4.4 Top-Selling Products
+
+Display:
+
+- Product image.
+- Product name.
+- Units sold.
+- Revenue generated.
+- Remaining stock.
+
+## 4.5 Low Stock Alerts
+
+Display products whose stock is below the configured threshold.
+
+Include:
+
+- Product image.
+- Product name.
+- Current quantity.
+- Threshold.
+- Update Stock action.
+
+## 4.6 Recent Activity
+
+Show recent business events:
+
+- New order received.
+- Payment successful.
+- Product added.
+- Stock updated.
+- Order shipped.
+- Commission request received.
+- Customer registered.
+
+Use actual database events or recorded activity, not fake activity entries.
+
+# 5. PRODUCT MANAGEMENT
+
+Route: `/admin/products`
+
+This is one of the most important modules.
+
+The owner must be able to manage the entire product catalog.
+
+## 5.1 Product Listing
+
+Display a data table with:
+
+- Product thumbnail.
+- Product name.
+- SKU.
+- Category.
+- Price.
+- Stock.
+- Product type.
+- Publication status.
+- Created date.
+- Actions.
+
+Actions:
+
+- View.
+- Edit.
+- Duplicate.
+- Publish / Unpublish.
+- Delete.
+
+Filters:
+
+- All products.
+- Published.
+- Drafts.
+- Out of stock.
+- Low stock.
+- Category.
+- Product type.
+
+Search by:
+
+- Product name.
+- SKU.
+- Slug.
+
+## 5.2 Add Product
+
+Route: `/admin/products/new`
+
+Create a complete product creation form.
+
+### Basic Information
+
+- Product name.
+- URL slug (auto-generated, editable).
+- SKU.
+- Short description.
+- Full description.
+- Category.
+- Tags.
+
+### Pricing
+
+- Selling price.
+- Compare-at price.
+- Cost price (owner-only).
+- Tax classification or applicable tax settings.
+
+Use INR as the default currency.
+
+### Product Type
+
+Provide options:
+
+1. Original Artwork.
+2. Art Print.
+3. Handmade Craft.
+4. Customizable Product.
+
+### Product Media
+
+Allow:
+
+- Multiple image uploads.
+- Main cover image selection.
+- Image ordering.
+- Image deletion.
+- Image preview.
+- Optional artwork video.
+
+Images must upload to Supabase Storage.
+
+Store image paths and metadata in the database.
+
+Do not store large binary image files in PostgreSQL.
+
+### Artwork Specifications
+
+- Medium.
+- Material.
+- Dimensions.
+- Weight.
+- Care instructions.
+- Packaging details.
+- Estimated preparation days.
+- Handmade/original status.
+
+### Inventory
+
+- SKU.
+- Track inventory toggle.
+- Stock quantity.
+- Low stock threshold.
+- Allow backorders toggle (default false).
+
+For one-of-one original artwork, quantity should default to one.
+
+### Shipping
+
+- Product weight.
+- Package dimensions.
+- Shipping requirement.
+- Preparation time.
+
+### Publishing
+
+- Save as Draft.
+- Publish.
+- Schedule publishing (optional future enhancement).
+- Featured product toggle.
+
+### Form Behavior
+
+- Validate all required fields.
+- Show upload progress.
+- Prevent duplicate submissions.
+- Display save success and error states.
+- Warn before leaving with unsaved changes.
+
+## 5.3 Edit Product
+
+The edit page must reuse the same form component.
+
+Changes must update the database.
+
+Published products must reflect updates on the customer storefront.
+
+## 5.4 Product Deletion
+
+Before deleting a product:
+
+- Show a confirmation modal.
+- Warn if the product appears in existing orders.
+- Preserve historical order items.
+- Prefer archival or unpublishing over destructive deletion.
+
+Never delete order history when removing a product.
+
+# 6. CATEGORY MANAGEMENT
+
+Route: `/admin/categories`
+
+Features:
+
+- Create category.
+- Edit category.
+- Delete category where safe.
+- Upload category image.
+- Set category description.
+- Set category slug.
+- Change display order.
+- Enable/disable category.
+
+Initial categories:
+
+- Sketches.
+- Handicrafts.
+- Paintings.
+- Clay & Terracotta.
+- Wood & Woven Crafts.
+- Watercolor Prints.
+
+Category changes must synchronize with the storefront navigation and product filters.
+
+# 7. INVENTORY MANAGEMENT
+
+Route: `/admin/inventory`
+
+Provide a dedicated inventory control center.
+
+Display:
+
+- Product image.
+- Product name.
+- SKU.
+- Current stock.
+- Low-stock threshold.
+- Stock status.
+- Last updated.
+
+Inventory statuses:
+
+- In Stock.
+- Low Stock.
+- Out of Stock.
+- Backordered (only if enabled).
+
+## 7.1 Stock Adjustment
+
+Allow the owner to:
+
+- Increase stock.
+- Decrease stock.
+- Set an exact stock quantity.
+- Record an adjustment reason.
+
+Example reasons:
+
+- New handmade batch.
+- Damaged item.
+- Manual correction.
+- Returned item.
+- Stock received.
+
+Maintain an inventory movement history containing:
+
+- Product ID.
+- Previous quantity.
+- Change amount.
+- New quantity.
+- Reason.
+- Owner ID.
+- Timestamp.
+
+All stock updates must be transactional.
+
+## 7.2 Inventory Rules
+
+- Never allow negative stock.
+- Prevent purchases exceeding available stock.
+- Reserve or decrement inventory atomically during order processing.
+- Restore inventory only through a controlled cancellation/refund workflow.
+- Prevent duplicate stock deductions from repeated payment webhooks.
+- Do not treat a failed or unverified payment as a completed sale.
+
+# 8. ORDER MANAGEMENT
+
+Route: `/admin/orders`
+
+The owner must have complete visibility and control over incoming orders.
+
+## 8.1 Order Listing
+
+Display:
+
+- Order number.
+- Customer name.
+- Order date.
+- Product count.
+- Total amount.
+- Payment status.
+- Fulfillment status.
+- Delivery method.
+- Actions.
+
+Filters:
+
+- All.
+- Pending.
+- Paid.
+- Processing.
+- Packed.
+- Shipped.
+- Delivered.
+- Cancelled.
+- Refunded.
+
+Search by:
+
+- Order number.
+- Customer name.
+- Email.
+- Phone.
+
+## 8.2 Order Details
+
+Route: `/admin/orders/[id]`
+
+Display:
+
+### Customer Information
+
+- Customer name.
+- Email.
+- Phone.
+
+### Shipping Information
+
+- Full shipping address.
+- Postal code.
+- City and state.
+- Country.
+
+### Purchased Products
+
+- Product image.
+- Product name.
+- SKU.
+- Quantity.
+- Unit price.
+- Line total.
+
+### Payment Information
+
+- Payment provider.
+- Payment status.
+- Transaction reference.
+- Payment date.
+- Refund information.
+
+### Order Summary
+
+- Subtotal.
+- Shipping fee.
+- Discount.
+- Tax if applicable.
+- Final total.
+
+## 8.3 Order Status Management
+
+Allow owner to update fulfillment status:
+
+Pending → Confirmed → Processing → Packed → Shipped → Delivered
+
+Additional statuses:
+
+- Cancelled.
+- Returned.
+- Refunded.
+
+Each status update must:
+
+- Be validated against allowed transitions.
+- Record the previous and new status.
+- Record who changed it.
+- Record the timestamp.
+- Create an order status history entry.
+- Synchronize with the customer order tracker.
+
+Allow tracking number and courier name to be entered when shipping.
+
+Customers must be able to see appropriate status updates through Part 1.
+
+## 8.4 Cancellation and Refunds
+
+Provide a cancellation workflow.
+
+Require:
+
+- Cancellation reason.
+- Confirmation.
+- Inventory restoration when applicable.
+- Payment refund workflow where supported.
+- Audit history.
+
+Never mark an order as refunded merely because an admin clicked a button. Confirm the actual payment provider refund result.
+
+# 9. CUSTOMER MANAGEMENT
+
+Route: `/admin/customers`
+
+Display all registered customers.
+
+Columns:
+
+- Customer name.
+- Email.
+- Phone.
+- Registration date.
+- Total orders.
+- Total spend.
+- Last order date.
+
+Customer details page:
+
+- Profile information.
+- Saved addresses.
+- Order history.
+- Total purchase value.
+- Customer activity.
+- Commission requests.
+
+The owner can view customer information but cannot read passwords or authentication secrets.
+
+Customer data must only be accessible to the authorized owner and the respective customer.
+
+# 10. CUSTOM COMMISSION MANAGEMENT
+
+Route: `/admin/commissions`
+
+Manage artwork requests submitted through Part 1.
+
+Display:
+
+- Request ID.
+- Customer.
+- Artwork type.
+- Budget.
+- Submission date.
+- Status.
+
+Statuses:
+
+- New.
+- Reviewing.
+- Quoted.
+- Accepted.
+- In Progress.
+- Completed.
+- Rejected.
+
+Commission detail page:
+
+- Customer details.
+- Reference images.
+- Artwork description.
+- Preferred dimensions.
+- Budget.
+- Owner notes.
+- Quoted price.
+- Status history.
+
+Allow owner to:
+
+- Review requests.
+- Add internal notes.
+- Change status.
+- Enter quoted price.
+- Record acceptance.
+- Create an order after agreement through a controlled workflow.
+
+Internal notes must never be exposed to customers.
+
+# 11. ANALYTICS AND REPORTING
+
+Route: `/admin/analytics`
+
+Create a professional analytics workspace.
+
+## 11.1 Revenue Analytics
+
+Charts:
+
+- Daily revenue.
+- Weekly revenue.
+- Monthly revenue.
+- Annual revenue.
+
+Filters:
+
+- Custom date range.
+- Product category.
+- Payment status.
+
+## 11.2 Sales Analytics
+
+Metrics:
+
+- Total orders.
+- Units sold.
+- Average order value.
+- Revenue.
+- Completed orders.
+- Cancelled orders.
+- Refunded amount.
+
+## 11.3 Product Analytics
+
+Show:
+
+- Bestselling products.
+- Lowest-selling products.
+- Most viewed products (only if view tracking is implemented).
+- Stock movement.
+- Category performance.
+
+## 11.4 Customer Analytics
+
+Show:
+
+- Total customers.
+- New customers.
+- Returning customers.
+- Repeat purchase rate.
+- Customer lifetime spend.
+
+## 11.5 Export Reports
+
+Allow CSV export for:
+
+- Orders.
+- Products.
+- Inventory.
+- Customers.
+- Revenue summaries.
+
+Reports must respect date filters and access permissions.
+
+Do not fabricate analytics metrics.
+
+# 12. DISCOUNT AND COUPON MANAGEMENT
+
+Route: `/admin/discounts`
+
+Allow the owner to create discount codes.
+
+Fields:
+
+- Coupon code.
+- Discount type.
+- Percentage or fixed amount.
+- Minimum cart value.
+- Maximum discount.
+- Usage limit.
+- Per-customer usage limit.
+- Start date.
+- Expiration date.
+- Active/inactive.
+
+Example:
+
+- WELCOME10.
+- ARTLOVER15.
+- FESTIVE200.
+
+Validation must happen on the server.
+
+Never trust discount values submitted by the browser.
+
+# 13. STOREFRONT CONTENT MANAGEMENT
+
+Route: `/admin/content`
+
+The owner should be able to update key storefront content without editing source code.
+
+### Homepage Management
+
+Editable fields:
+
+- Announcement message.
+- Hero headline.
+- Hero description.
+- Hero artwork images.
+- Primary CTA label and destination.
+- Secondary CTA label and destination.
+- Featured products.
+- Category display order.
+- Process section content.
+- Newsletter section text.
+
+### Artist Story
+
+- Studio introduction.
+- Artist biography.
+- Studio photographs.
+- Story content.
+- Creative philosophy.
+
+### Footer
+
+- Brand description.
+- Contact email.
+- Social media links.
+- Footer links.
+
+Content changes must automatically reflect on the storefront.
+
+Preserve sensible defaults if a content field is empty.
+
+# 14. NEWSLETTER MANAGEMENT
+
+Route: `/admin/newsletter`
+
+Display:
+
+- Subscriber email.
+- Subscription date.
+- Subscription status.
+
+Allow:
+
+- Search.
+- Filter.
+- Export CSV.
+- Unsubscribe management.
+
+Support proper consent and unsubscribe behavior.
+
+Do not expose the subscriber list publicly.
+
+# 15. NOTIFICATION CENTER
+
+Create an owner notification center.
+
+Notification types:
+
+- New order.
+- Successful payment.
+- Failed payment.
+- Low inventory.
+- Out of stock.
+- New commission.
+- New customer.
+- Refund completed.
+
+Features:
+
+- Unread indicator.
+- Mark as read.
+- Mark all as read.
+- Notification timestamp.
+- Link to related record.
+
+Use database-backed notifications.
+
+Use Supabase Realtime where appropriate for live dashboard updates.
+
+# 16. STORE SETTINGS
+
+Route: `/admin/settings`
+
+Divide settings into tabs.
+
+## 16.1 General Settings
+
+- Store name.
+- Logo.
+- Contact email.
+- Contact phone.
+- Currency.
+- Timezone.
+- Store description.
+
+Defaults:
+
+- Brand: varniks_atelier.
+- Currency: INR.
+- Timezone: Asia/Kolkata.
+- Country: India.
+
+## 16.2 Shipping Settings
+
+- Free shipping threshold.
+- Default shipping fee.
+- Shipping zones.
+- Estimated delivery times.
+- Preparation time.
+
+## 16.3 Payment Settings
+
+- Razorpay enabled/disabled.
+- Stripe enabled/disabled.
+- Payment configuration status.
+
+Never display complete secret keys in the dashboard.
+
+Payment secrets must be configured through secure environment variables or Supabase Edge Function secrets.
+
+## 16.4 Tax Settings
+
+- Tax applicability.
+- Tax rates.
+- Inclusive/exclusive pricing configuration.
+
+Do not assume tax rates. The owner must configure applicable rates after verification.
+
+## 16.5 Policy Settings
+
+- Shipping policy.
+- Return policy.
+- Refund policy.
+- Privacy policy.
+- Terms and conditions.
+
+# 17. SUPABASE BACKEND ARCHITECTURE
+
+Supabase is the primary backend.
+
+Use the following services:
+
+1. Supabase PostgreSQL for structured application data.
+2. Supabase Auth for customer and owner authentication.
+3. Supabase Storage for artwork and uploaded reference images.
+4. Supabase Row Level Security for authorization.
+5. Supabase Edge Functions for sensitive operations.
+6. Supabase Realtime for selected live updates.
+
+## 17.1 Database Design Principles
+
+- Use UUID primary keys.
+- Use foreign keys.
+- Add indexes for frequently queried columns.
+- Use timestamps in UTC.
+- Store monetary values as integer paise, not floating-point values.
+- Store currency explicitly where required.
+- Use transactions for stock and order operations.
+- Preserve historical order snapshots.
+- Never delete order items because a product was removed.
+- Keep owner-only data protected.
+- Enable RLS on all exposed application tables.
+
+Recommended database tables:
+
+### Identity and Authorization
+
+- profiles
+- private.admin_users
+
+### Catalog
+
+- categories
+- products
+- product_images
+
+### Customer Activity
+
+- addresses
+- carts
+- cart_items
+- wishlist_items
+
+### Orders
+
+- orders
+- order_items
+- order_status_history
+
+### Payments
+
+- payment_events
+
+### Store Operations
+
+- commissions
+- newsletter_subscribers
+- store_settings
+- inventory_movements
+- admin_notifications
+- coupons
+- coupon_redemptions
+
+Use an appropriate normalized relational design rather than placing all business data in a single JSON column.
+
+# 18. DATABASE ACCESS AND SECURITY
+
+Security is mandatory.
+
+### Customer Permissions
+
+Customers may:
+
+- View published products.
+- View active categories.
+- Manage their own profile.
+- Manage their own addresses.
+- Manage their own cart.
+- Manage their own wishlist.
+- View their own orders.
+- View their own order status.
+- Submit commission requests.
+- Subscribe to the newsletter.
+
+Customers may not:
+
+- View another customer's information.
+- View another customer's cart.
+- Change product prices.
+- Change inventory.
+- Change order payment status.
+- Read admin notifications.
+- Access owner-only data.
+
+Order creation, payment verification and inventory deduction must be performed through trusted backend logic.
+
+### Owner Permissions
+
+The authorized owner may:
+
+- Manage products.
+- Manage categories.
+- Manage inventory.
+- Manage orders.
+- Manage customers.
+- Manage commissions.
+- View analytics.
+- Manage store content.
+- Manage coupons.
+- Manage settings.
+
+### Backend Permissions
+
+Supabase secret/service-role credentials must only be used in trusted server environments.
+
+Never expose them in:
+
+- React source code.
+- Browser bundles.
+- Public environment variables.
+- GitHub repositories.
+- Frontend local storage.
+
+Use the publishable key on the frontend with proper RLS.
+
+# 19. PAYMENT INTEGRATION
+
+Primary payment gateway: Razorpay.
+
+Optional secondary gateway: Stripe.
+
+### Payment Flow
+
+1. Customer submits checkout.
+2. Backend validates products and prices.
+3. Backend checks stock.
+4. Backend creates a pending order.
+5. Backend initiates payment.
+6. Customer completes payment.
+7. Provider sends payment result/webhook.
+8. Backend verifies signature.
+9. Backend confirms payment idempotently.
+10. Inventory is adjusted transactionally.
+11. Order becomes paid/confirmed.
+12. Customer receives confirmation.
+13. Owner receives notification.
+
+Never trust a frontend success redirect as proof of payment.
+
+Store provider references and webhook event identifiers to prevent duplicate processing.
+
+Use idempotency for payment events and inventory operations.
+
+# 20. SUPABASE STORAGE STRUCTURE
+
+Create these storage buckets:
+
+### product-media
+
+- Product cover images.
+- Secondary product images.
+- Artwork photography.
+- Category images.
+
+Access:
+
+- Public read for published storefront artwork.
+- Owner-only upload, update and deletion.
+
+### commission-references
+
+- Customer-uploaded reference artwork.
+- Private bucket.
+- Authenticated customer uploads to their own folder.
+- Only the respective customer and authorized owner can access the files.
+
+### store-assets
+
+- Logo.
+- Homepage hero assets.
+- Studio photographs.
+- Promotional banners.
+
+Use appropriate file size and MIME type validation.
+
+Store paths in PostgreSQL.
+
+Use signed URLs for private reference images.
+
+# 21. AUTOMATIC BACKEND SYNCHRONIZATION
+
+The storefront and admin dashboard must always use the same source of truth.
+
+Examples:
+
+**Product Update**\
+Owner changes a product price → PostgreSQL updates → storefront displays the new price.
+
+**Inventory Update**\
+Owner changes stock from 2 to 8 → database updates → storefront availability changes.
+
+**New Order**\
+Customer completes a verified payment → order is recorded → admin dashboard displays the order.
+
+**Order Status**\
+Owner marks order as shipped → customer order tracker displays shipped status.
+
+**Content Update**\
+Owner changes homepage announcement → storefront displays the new message.
+
+Implement appropriate cache invalidation or revalidation after mutations.
+
+Use Realtime for suitable live updates, not as a replacement for database authorization.
+
+# 22. AUDIT LOGGING
+
+Create an audit trail for important owner actions.
+
+Record:
+
+- Actor user ID.
+- Action.
+- Entity type.
+- Entity ID.
+- Previous values where appropriate.
+- New values where appropriate.
+- Timestamp.
+
+Examples:
+
+- Product price changed.
+- Product unpublished.
+- Inventory adjusted.
+- Order cancelled.
+- Refund initiated.
+- Store settings updated.
+
+Do not log passwords, secret keys, payment card details or other sensitive authentication data.
+
+# 23. ERROR HANDLING AND RELIABILITY
+
+Implement:
+
+- Loading skeletons.
+- Empty states.
+- Error messages.
+- Retry actions.
+- Confirmation dialogs.
+- Form validation.
+- Duplicate submission prevention.
+- Network error handling.
+- Permission-denied states.
+- Session expiry handling.
+
+Critical financial operations must fail safely.
+
+Never report a successful payment, stock update or refund before the backend confirms it.
+
+# 24. TESTING REQUIREMENTS
+
+Test the following scenarios:
+
+1. Customer cannot access `/admin`.
+2. Unauthenticated user cannot access private pages.
+3. Unauthorized customer cannot promote themselves to owner.
+4. Customer A cannot read Customer B's cart.
+5. Customer A cannot read Customer B's orders.
+6. Customer cannot update product price.
+7. Owner can create products.
+8. Owner can upload artwork.
+9. Product updates appear on the storefront.
+10. Stock cannot become negative.
+11. Concurrent purchases cannot oversell a one-of-one item.
+12. Duplicate payment webhooks do not double-deduct stock.
+13. Customer can view their own order.
+14. Customer cannot change payment status.
+15. Admin order status changes appear in the customer portal.
+16. Private commission reference images remain private.
+17. Analytics exclude unpaid and cancelled orders from recognized revenue.
+18. Admin session expiry redirects safely.
+
+Create automated database tests for RLS and backend operation tests.
+
+# 25. IMPLEMENTATION ORDER
+
+Build in the following order:
+
+**Stage 1 — Supabase Foundation**
+
+- Inspect Part 1.
+- Connect Supabase.
+- Create database schema.
+- Create SQL migration.
+- Apply RLS policies.
+- Create storage buckets.
+- Configure authentication.
+
+**Stage 2 — Owner Authorization**
+
+- Create admin login.
+- Implement secure owner authorization.
+- Protect admin routes.
+- Verify access restrictions.
+
+**Stage 3 — Catalog Management**
+
+- Product CRUD.
+- Image uploads.
+- Categories.
+- Inventory.
+
+**Stage 4 — Order Management**
+
+- Order listing.
+- Order details.
+- Status changes.
+- Customer order synchronization.
+
+**Stage 5 — Customer and Commission Management**
+
+- Customer records.
+- Commission requests.
+- Private reference images.
+
+**Stage 6 — Analytics and Store Management**
+
+- Revenue analytics.
+- Product analytics.
+- Coupons.
+- Store content.
+- Newsletter.
+- Notifications.
+- Settings.
+
+**Stage 7 — Payment Integration**
+
+- Razorpay.
+- Webhook verification.
+- Idempotency.
+- Refund workflow.
+
+**Stage 8 — Integration and Testing**
+
+- Connect all Part 1 pages to Supabase.
+- Remove prototype-only data.
+- Test RLS.
+- Test payment and inventory flows.
+- Verify responsive admin screens.
+
+# 26. FINAL ACCEPTANCE CRITERIA
+
+The project is complete when:
+
+- The Part 1 storefront still works.
+- Supabase is the real source of truth.
+- Customers can register and log in.
+- One authorized owner can access the dashboard.
+- Unauthorized users cannot access admin functions.
+- Products can be created, updated, published and archived.
+- Product images upload successfully.
+- Inventory updates work.
+- Orders appear in the dashboard.
+- Owner can process orders.
+- Customers can see order updates.
+- Customers have isolated carts and addresses.
+- Commission requests can be managed.
+- Revenue analytics use verified financial records.
+- Store content can be edited without source-code changes.
+- RLS policies pass security tests.
+- Payment operations are server-verified.
+- No secret keys appear in the browser.
+- All important UI states work.
+- Mobile and desktop layouts are complete.
+
+# 27. FINAL INSTRUCTION TO THE AI CODING AGENT
+
+You are extending an existing VARNIKS_ATELIER storefront.
+
+Do not treat this as a standalone admin template.
+
+Inspect the existing codebase first.
+
+Build a complete single-owner Mini-Shopify management system that connects to the existing storefront using Supabase.
+
+Create real database tables, foreign keys, indexes, security policies, storage policies and backend operations.
+
+Generate a complete SQL migration that can be reviewed and executed in the Supabase SQL Editor.
+
+Also create the corresponding version-controlled migration file inside the project.
+
+Do not ask the owner to paste secret credentials into frontend code or ordinary chat.
+
+If external connection details are needed, request only the minimum necessary configuration through an appropriate secure environment setup. Never ask for the database password or service-role secret in a public source file.
+
+Do not claim that Supabase has been connected or the schema has been deployed until the operation has actually succeeded.
+
+Do not fabricate records, analytics, orders or payment statuses.
+
+Prioritize security, correctness, maintainability and integration with Part 1.
+
+**FINAL DELIVERABLE: A COMPLETE VARNIKS_ATELIER CUSTOMER STOREFRONT + PRIVATE SINGLE-OWNER ADMIN DASHBOARD + SECURE SUPABASE BACKEND.**
+
+# **Part 2B — Supabase database schema and SQL Editor**
+
+This is the actual database foundation the coding agent must create.
+
+## **2. Database relationship design**
+
+[GitHub - heldiapriadi/ecommerce · GitHub](https://images.openai.com/static-rsc-4/ynCe0TvC0qgc0jXxQSXXIyctRePV1lvkz1Thp5J9Gn1KjI1FNcdTIE7wi68Rec-tZ4efjVAnArIp3Rs-PVCR8i1c8IMKLvp21rdgEvp5Bb-XpKVefod0OAqYvaHwBcm0A8xGFurlAlWtc_Ks9sz2rkrd0ZjIqb-JPktnhfDmrKw?purpose=inline)
+
+[github.com](https://github.com/heldiapriadi/ecommerce?utm_source=chatgpt.com)
+
+The proposed schema separates customer identity, products, inventory, transactions, payments and owner operations.
+
+| Table                    | Purpose                                |
+| ------------------------ | -------------------------------------- |
+| `profiles`               | Customer and owner profile             |
+| `admin_users`            | Private owner authorization            |
+| `categories`             | Product categories                     |
+| `products`               | Product catalog                        |
+| `product_images`         | Multiple images per product            |
+| `addresses`              | Customer shipping addresses            |
+| `carts`                  | Isolated customer carts                |
+| `cart_items`             | Items inside individual carts          |
+| `wishlist_items`         | Customer wishlists                     |
+| `orders`                 | Customer orders                        |
+| `order_items`            | Historical purchased product snapshots |
+| `order_status_history`   | Order tracking history                 |
+| `inventory_movements`    | Stock adjustment history               |
+| `payment_events`         | Payment webhook event records          |
+| `commissions`            | Custom artwork requests                |
+| `newsletter_subscribers` | Newsletter registrations               |
+| `store_settings`         | Editable storefront settings           |
+| `admin_notifications`    | Owner notifications                    |
+| `coupons`                | Discount configurations                |
+| `coupon_redemptions`     | Discount usage records                 |
+| `audit_logs`             | Owner activity records                 |
+
+**Important monetary design:** Store money as integer paise. For example, ₹1,499 is stored as `149900`. This avoids floating-point calculation errors.
+
+## **3. Ready-to-paste Supabase SQL**
+
+
+
+SQL migration 001
+
+&#x20;Initial database foundation
+
+
+
+The following script creates the main tables, relationships, indexes, updated-at triggers, owner authorization helper and initial RLS policies.
+
+Open:
+
+[Supabase Dashboard](https://supabase.com/dashboard?utm_source=chatgpt.com) → Select your project → **SQL Editor** → New Query.
+
+# VARNIKS_ATELIER — Initial Supabase Database Migration
+
+# IMPORTANT:
+
+# 1. Run this in a new or appropriately reviewed project.
+
+# 2. This script creates application tables and policies.
+
+# 3. It does not create an owner automatically.
+
+# 4. Create your owner account in Supabase Auth first.
+
+# 5. Bootstrap the owner using the separate SQL statement in the PRD.
+
+\-- =========================================================\
+\-- 01. PRIVATE SCHEMA AND AUTHORIZATION\
+\-- =========================================================
+
+create schema if not exists private;
+
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.admin_users (\
+user_id uuid primary key references auth.users(id) on delete cascade,\
+is_active boolean not null default true,\
+created_at timestamptz not null default now()\
+);
+
+create or replace function public.is_store_admin()\
+returns boolean\
+language sql\
+stable\
+security definer\
+set search_path = ''\
+as $$\
+select exists (\
+select 1\
+from private.admin_users\
+where user_id = (select auth.uid())\
+and is_active = true\
+);\
+$$;
+
+revoke all on function public.is_store_admin() from public;\
+grant execute on function public.is_store_admin() to authenticated;
+
+\-- =========================================================\
+\-- 02. COMMON UPDATED_AT FUNCTION\
+\-- =========================================================
+
+create or replace function public.set_updated_at()\
+returns trigger\
+language plpgsql\
+set search_path = ''\
+as $$\
+begin\
+new\.updated_at = now();\
+return new;\
+end;\
+$$;
+
+\-- =========================================================\
+\-- 03. CUSTOMER PROFILES\
+\-- =========================================================
+
+create table if not exists public.profiles (\
+id uuid primary key references auth.users(id) on delete cascade,\
+full_name text,\
+phone text,\
+avatar_url text,\
+created_at timestamptz not null default now(),\
+updated_at timestamptz not null default now()\
+);
+
+create or replace function public.handle_new_user()\
+returns trigger\
+language plpgsql\
+security definer\
+set search_path = ''\
+as $$\
+begin\
+insert into public.profiles (id, full_name)\
+values (\
+new\.id,\
+coalesce(new\.raw_user_meta_data ->> 'full_name', '')\
+)\
+on conflict (id) do nothing;
+
+```
+return new;
+```
+
+end;\
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created\
+after insert on auth.users\
+for each row execute function public.handle_new_user();
+
+\-- =========================================================\
+\-- 04. CATEGORIES\
+\-- =========================================================
+
+create table if not exists public.categories (\
+id uuid primary key default gen_random_uuid(),\
+name text not null,\
+slug text not null unique,\
+description text,\
+image_path text,\
+display_order integer not null default 0,\
+is_active boolean not null default true,\
+created_at timestamptz not null default now(),\
+updated_at timestamptz not null default now()\
+);
+
+\-- =========================================================\
+\-- 05. PRODUCTS\
+\-- =========================================================
+
+create table if not exists public.products (\
+id uuid primary key default gen_random_uuid(),\
+category_id uuid references public.categories(id) on delete set null,
+
+```
+name text not null,
+slug text not null unique,
+sku text unique,
+short_description text,
+description text,
+
+product_type text not null default 'handmade'
+    check (product_type in (
+        'original_artwork',
+        'art_print',
+        'handmade',
+        'customizable'
+    )),
+
+price_inr_paise bigint not null
+    check (price_inr_paise >= 0),
+
+compare_at_price_inr_paise bigint
+    check (
+        compare_at_price_inr_paise is null
+        or compare_at_price_inr_paise >= 0
+    ),
+
+cost_price_inr_paise bigint
+    check (
+        cost_price_inr_paise is null
+        or cost_price_inr_paise >= 0
+    ),
+
+medium text,
+material text,
+dimensions text,
+weight_grams integer,
+care_instructions text,
+preparation_days integer not null default 3,
+
+stock_quantity integer not null default 0
+    check (stock_quantity >= 0),
+
+low_stock_threshold integer not null default 3
+    check (low_stock_threshold >= 0),
+
+track_inventory boolean not null default true,
+allow_backorders boolean not null default false,
+
+is_handmade boolean not null default true,
+is_original boolean not null default false,
+is_featured boolean not null default false,
+is_published boolean not null default false,
+
+status text not null default 'draft'
+    check (status in ('draft', 'published', 'archived')),
+
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_products_category\
+on public.products(category_id);
+
+create index if not exists idx_products_published\
+on public.products(is_published, status);
+
+create index if not exists idx_products_created\
+on public.products(created_at desc);
+
+create index if not exists idx_products_sku\
+on public.products(sku);
+
+\-- =========================================================\
+\-- 06. PRODUCT IMAGES\
+\-- =========================================================
+
+create table if not exists public.product_images (\
+id uuid primary key default gen_random_uuid(),\
+product_id uuid not null\
+references public.products(id) on delete cascade,
+
+```
+storage_path text not null,
+alt_text text,
+display_order integer not null default 0,
+is_primary boolean not null default false,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_product_images_product\
+on public.product_images(product_id, display_order);
+
+create unique index if not exists idx_product_primary_image\
+on public.product_images(product_id)\
+where is_primary = true;
+
+\-- =========================================================\
+\-- 07. CUSTOMER ADDRESSES\
+\-- =========================================================
+
+create table if not exists public.addresses (\
+id uuid primary key default gen_random_uuid(),\
+user_id uuid not null references auth.users(id) on delete cascade,
+
+```
+full_name text not null,
+phone text not null,
+address_line_1 text not null,
+address_line_2 text,
+city text not null,
+state text not null,
+postal_code text not null,
+country text not null default 'India',
+
+is_default boolean not null default false,
+
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_addresses_user\
+on public.addresses(user_id);
+
+create unique index if not exists idx_one_default_address\
+on public.addresses(user_id)\
+where is_default = true;
+
+\-- =========================================================\
+\-- 08. CUSTOMER CARTS\
+\-- =========================================================
+
+create table if not exists public.carts (\
+id uuid primary key default gen_random_uuid(),\
+user_id uuid not null references auth.users(id) on delete cascade,
+
+```
+status text not null default 'active'
+    check (status in ('active', 'converted', 'abandoned')),
+
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+);
+
+create unique index if not exists idx_one_active_cart_per_user\
+on public.carts(user_id)\
+where status = 'active';
+
+create table if not exists public.cart_items (\
+id uuid primary key default gen_random_uuid(),\
+cart_id uuid not null references public.carts(id) on delete cascade,\
+product_id uuid not null references public.products(id) on delete restrict,
+
+```
+quantity integer not null check (quantity > 0),
+
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+
+unique(cart_id, product_id)
+```
+
+);
+
+create index if not exists idx_cart_items_cart\
+on public.cart_items(cart_id);
+
+\-- =========================================================\
+\-- 09. WISHLIST\
+\-- =========================================================
+
+create table if not exists public.wishlist_items (\
+id uuid primary key default gen_random_uuid(),\
+user_id uuid not null references auth.users(id) on delete cascade,\
+product_id uuid not null references public.products(id) on delete cascade,
+
+```
+created_at timestamptz not null default now(),
+
+unique(user_id, product_id)
+```
+
+);
+
+\-- =========================================================\
+\-- 10. ORDERS\
+\-- =========================================================
+
+create table if not exists public.orders (\
+id uuid primary key default gen_random_uuid(),
+
+```
+order_number text not null unique,
+user_id uuid not null references auth.users(id) on delete restrict,
+
+status text not null default 'pending'
+    check (status in (
+        'pending',
+        'confirmed',
+        'processing',
+        'packed',
+        'shipped',
+        'delivered',
+        'cancelled',
+        'returned',
+        'refunded'
+    )),
+
+payment_status text not null default 'pending'
+    check (payment_status in (
+        'pending',
+        'authorized',
+        'paid',
+        'failed',
+        'partially_refunded',
+        'refunded'
+    )),
+
+payment_provider text,
+provider_order_id text,
+provider_payment_id text,
+
+subtotal_inr_paise bigint not null default 0
+    check (subtotal_inr_paise >= 0),
+
+shipping_inr_paise bigint not null default 0
+    check (shipping_inr_paise >= 0),
+
+discount_inr_paise bigint not null default 0
+    check (discount_inr_paise >= 0),
+
+tax_inr_paise bigint not null default 0
+    check (tax_inr_paise >= 0),
+
+total_inr_paise bigint not null
+    check (total_inr_paise >= 0),
+
+currency text not null default 'INR',
+
+shipping_address jsonb not null,
+
+tracking_number text,
+courier_name text,
+
+customer_note text,
+
+placed_at timestamptz not null default now(),
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_orders_user\
+on public.orders(user_id, created_at desc);
+
+create index if not exists idx_orders_status\
+on public.orders(status);
+
+create index if not exists idx_orders_payment\
+on public.orders(payment_status);
+
+create index if not exists idx_orders_created\
+on public.orders(created_at desc);
+
+\-- =========================================================\
+\-- 11. ORDER ITEM SNAPSHOTS\
+\-- =========================================================
+
+create table if not exists public.order_items (\
+id uuid primary key default gen_random_uuid(),
+
+```
+order_id uuid not null references public.orders(id) on delete restrict,
+product_id uuid references public.products(id) on delete set null,
+
+product_name text not null,
+product_sku text,
+product_image_path text,
+
+quantity integer not null check (quantity > 0),
+
+unit_price_inr_paise bigint not null
+    check (unit_price_inr_paise >= 0),
+
+line_total_inr_paise bigint not null
+    check (line_total_inr_paise >= 0),
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_order_items_order\
+on public.order_items(order_id);
+
+\-- =========================================================\
+\-- 12. ORDER STATUS HISTORY\
+\-- =========================================================
+
+create table if not exists public.order_status_history (\
+id uuid primary key default gen_random_uuid(),
+
+```
+order_id uuid not null references public.orders(id) on delete cascade,
+
+old_status text,
+new_status text not null,
+note text,
+
+changed_by uuid references auth.users(id) on delete set null,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_order_history\
+on public.order_status_history(order_id, created_at);
+
+\-- =========================================================\
+\-- 13. INVENTORY MOVEMENTS\
+\-- =========================================================
+
+create table if not exists public.inventory_movements (\
+id uuid primary key default gen_random_uuid(),
+
+```
+product_id uuid not null references public.products(id) on delete restrict,
+
+previous_quantity integer not null,
+change_quantity integer not null,
+new_quantity integer not null check (new_quantity >= 0),
+
+reason text not null,
+reference_id uuid,
+
+created_by uuid references auth.users(id) on delete set null,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_inventory_product\
+on public.inventory_movements(product_id, created_at desc);
+
+\-- =========================================================\
+\-- 14. PAYMENT EVENTS\
+\-- =========================================================
+
+create table if not exists public.payment_events (\
+id uuid primary key default gen_random_uuid(),
+
+```
+provider text not null,
+provider_event_id text not null,
+
+order_id uuid references public.orders(id) on delete set null,
+
+event_type text not null,
+processing_status text not null default 'received'
+    check (processing_status in (
+        'received',
+        'processed',
+        'failed',
+        'ignored'
+    )),
+
+payload jsonb,
+processed_at timestamptz,
+
+created_at timestamptz not null default now(),
+
+unique(provider, provider_event_id)
+```
+
+);
+
+\-- =========================================================\
+\-- 15. CUSTOM COMMISSIONS\
+\-- =========================================================
+
+create table if not exists public.commissions (\
+id uuid primary key default gen_random_uuid(),
+
+```
+user_id uuid not null references auth.users(id) on delete restrict,
+
+artwork_type text not null,
+preferred_style text,
+preferred_size text,
+budget_min_inr_paise bigint,
+budget_max_inr_paise bigint,
+
+description text not null,
+
+reference_storage_paths text[] not null default '{}',
+
+status text not null default 'new'
+    check (status in (
+        'new',
+        'reviewing',
+        'quoted',
+        'accepted',
+        'in_progress',
+        'completed',
+        'rejected'
+    )),
+
+quoted_price_inr_paise bigint,
+internal_notes text,
+
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_commissions_user\
+on public.commissions(user_id);
+
+create index if not exists idx_commissions_status\
+on public.commissions(status);
+
+\-- =========================================================\
+\-- 16. NEWSLETTER SUBSCRIBERS\
+\-- =========================================================
+
+create table if not exists public.newsletter_subscribers (\
+id uuid primary key default gen_random_uuid(),
+
+```
+email text not null unique,
+is_subscribed boolean not null default true,
+
+subscribed_at timestamptz not null default now(),
+unsubscribed_at timestamptz
+```
+
+);
+
+\-- =========================================================\
+\-- 17. STORE SETTINGS\
+\-- =========================================================
+
+create table if not exists public.store_settings (\
+id uuid primary key default gen_random_uuid(),
+
+```
+setting_key text not null unique,
+setting_value jsonb not null default '{}'::jsonb,
+
+is_public boolean not null default false,
+
+updated_at timestamptz not null default now()
+```
+
+);
+
+insert into public.store_settings\
+(setting_key, setting_value, is_public)\
+values\
+(\
+'general',\
+'{"store_name":"varniks_atelier","currency":"INR","timezone":"Asia/Kolkata","country":"India"}'::jsonb,\
+true\
+),\
+(\
+'shipping',\
+'{"free_shipping_threshold_inr_paise":99900,"default_shipping_inr_paise":0}'::jsonb,\
+true\
+),\
+(\
+'homepage',\
+'{"announcement":"Free shipping on orders above ₹999 • Every piece is packed with love ♡"}'::jsonb,\
+true\
+)\
+on conflict (setting_key) do nothing;
+
+\-- =========================================================\
+\-- 18. ADMIN NOTIFICATIONS\
+\-- =========================================================
+
+create table if not exists public.admin_notifications (\
+id uuid primary key default gen_random_uuid(),
+
+```
+notification_type text not null,
+title text not null,
+message text,
+
+entity_type text,
+entity_id uuid,
+
+is_read boolean not null default false,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_admin_notifications\
+on public.admin_notifications(is_read, created_at desc);
+
+\-- =========================================================\
+\-- 19. COUPONS\
+\-- =========================================================
+
+create table if not exists public.coupons (\
+id uuid primary key default gen_random_uuid(),
+
+```
+code text not null unique,
+
+discount_type text not null
+    check (discount_type in ('percentage', 'fixed')),
+
+discount_value bigint not null check (discount_value > 0),
+
+minimum_order_inr_paise bigint not null default 0,
+
+maximum_discount_inr_paise bigint,
+
+usage_limit integer,
+per_customer_limit integer not null default 1,
+
+starts_at timestamptz,
+expires_at timestamptz,
+
+is_active boolean not null default true,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+\-- =========================================================\
+\-- 20. COUPON REDEMPTIONS\
+\-- =========================================================
+
+create table if not exists public.coupon_redemptions (\
+id uuid primary key default gen_random_uuid(),
+
+```
+coupon_id uuid not null references public.coupons(id) on delete restrict,
+user_id uuid not null references auth.users(id) on delete restrict,
+order_id uuid not null references public.orders(id) on delete restrict,
+
+discount_inr_paise bigint not null check (discount_inr_paise >= 0),
+
+created_at timestamptz not null default now(),
+
+unique(coupon_id, order_id)
+```
+
+);
+
+create index if not exists idx_coupon_user\
+on public.coupon_redemptions(coupon_id, user_id);
+
+\-- =========================================================\
+\-- 21. AUDIT LOGS\
+\-- =========================================================
+
+create table if not exists public.audit_logs (\
+id uuid primary key default gen_random_uuid(),
+
+```
+actor_user_id uuid references auth.users(id) on delete set null,
+
+action text not null,
+entity_type text not null,
+entity_id uuid,
+
+old_values jsonb,
+new_values jsonb,
+
+created_at timestamptz not null default now()
+```
+
+);
+
+create index if not exists idx_audit_logs_created\
+on public.audit_logs(created_at desc);
+
+\-- =========================================================\
+\-- 22. UPDATED_AT TRIGGERS\
+\-- =========================================================
+
+do $$\
+declare\
+table_name text;\
+begin\
+foreach table_name in array array[\
+'profiles',\
+'categories',\
+'products',\
+'addresses',\
+'carts',\
+'cart_items',\
+'orders',\
+'commissions',\
+'store_settings'\
+]\
+loop\
+execute format(\
+'drop trigger if exists set_updated_at on public.%I',\
+table_name\
+);
+
+```
+    execute format(
+        'create trigger set_updated_at
+         before update on public.%I
+         for each row execute function public.set_updated_at()',
+        table_name
+    );
+end loop;
+```
+
+end;\
+$$;
+
+\-- =========================================================\
+\-- 23. ENABLE ROW LEVEL SECURITY\
+\-- =========================================================
+
+alter table public.profiles enable row level security;\
+alter table public.categories enable row level security;\
+alter table public.products enable row level security;\
+alter table public.product_images enable row level security;\
+alter table public.addresses enable row level security;\
+alter table public.carts enable row level security;\
+alter table public.cart_items enable row level security;\
+alter table public.wishlist_items enable row level security;\
+alter table public.orders enable row level security;\
+alter table public.order_items enable row level security;\
+alter table public.order_status_history enable row level security;\
+alter table public.inventory_movements enable row level security;\
+alter table public.payment_events enable row level security;\
+alter table public.commissions enable row level security;\
+alter table public.newsletter_subscribers enable row level security;\
+alter table public.store_settings enable row level security;\
+alter table public.admin_notifications enable row level security;\
+alter table public.coupons enable row level security;\
+alter table public.coupon_redemptions enable row level security;\
+alter table public.audit_logs enable row level security;
+
+\-- =========================================================\
+\-- 24. PROFILE POLICIES\
+\-- =========================================================
+
+create policy "Users read own profile"\
+on public.profiles for select\
+to authenticated\
+using (id = (select auth.uid()) or public.is_store_admin());
+
+create policy "Users update own profile"\
+on public.profiles for update\
+to authenticated\
+using (id = (select auth.uid()) and not public.is_store_admin())\
+with check (id = (select auth.uid()) and not public.is_store_admin());
+
+create policy "Owner manages profiles"\
+on public.profiles for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 25. CATALOG POLICIES\
+\-- =========================================================
+
+create policy "Public reads active categories"\
+on public.categories for select\
+to anon, authenticated\
+using (is_active = true or public.is_store_admin());
+
+create policy "Owner manages categories"\
+on public.categories for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Public reads published products"\
+on public.products for select\
+to anon, authenticated\
+using (\
+(is_published = true and status = 'published')\
+or public.is_store_admin()\
+);
+
+create policy "Owner manages products"\
+on public.products for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Public reads published product images"\
+on public.product_images for select\
+to anon, authenticated\
+using (\
+exists (\
+select 1\
+from public.products p\
+where p.id = product_id\
+and p.is_published = true\
+and p.status = 'published'\
+)\
+or public.is_store_admin()\
+);
+
+create policy "Owner manages product images"\
+on public.product_images for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 26. ADDRESS POLICIES\
+\-- =========================================================
+
+create policy "Customers manage own addresses"\
+on public.addresses for all\
+to authenticated\
+using (user_id = (select auth.uid()))\
+with check (user_id = (select auth.uid()));
+
+create policy "Owner manages addresses"\
+on public.addresses for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 27. CART POLICIES\
+\-- =========================================================
+
+create policy "Customers manage own carts"\
+on public.carts for all\
+to authenticated\
+using (user_id = (select auth.uid()))\
+with check (user_id = (select auth.uid()));
+
+create policy "Owner reads carts"\
+on public.carts for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Customers manage own cart items"\
+on public.cart_items for all\
+to authenticated\
+using (\
+exists (\
+select 1 from public.carts c\
+where c.id = cart_id\
+and c.user_id = (select auth.uid())\
+)\
+)\
+with check (\
+exists (\
+select 1 from public.carts c\
+where c.id = cart_id\
+and c.user_id = (select auth.uid())\
+)\
+);
+
+create policy "Owner manages cart items"\
+on public.cart_items for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 28. WISHLIST POLICIES\
+\-- =========================================================
+
+create policy "Customers manage own wishlist"\
+on public.wishlist_items for all\
+to authenticated\
+using (user_id = (select auth.uid()))\
+with check (user_id = (select auth.uid()));
+
+create policy "Owner manages wishlist"\
+on public.wishlist_items for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 29. ORDER POLICIES\
+\-- =========================================================
+
+create policy "Customers read own orders"\
+on public.orders for select\
+to authenticated\
+using (user_id = (select auth.uid()) or public.is_store_admin());
+
+create policy "Owner manages orders"\
+on public.orders for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Customers read own order items"\
+on public.order_items for select\
+to authenticated\
+using (\
+exists (\
+select 1 from public.orders o\
+where o.id = order_id\
+and o.user_id = (select auth.uid())\
+)\
+or public.is_store_admin()\
+);
+
+create policy "Owner manages order items"\
+on public.order_items for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Customers read own order history"\
+on public.order_status_history for select\
+to authenticated\
+using (\
+exists (\
+select 1 from public.orders o\
+where o.id = order_id\
+and o.user_id = (select auth.uid())\
+)\
+or public.is_store_admin()\
+);
+
+create policy "Owner manages order history"\
+on public.order_status_history for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 30. INVENTORY POLICIES\
+\-- =========================================================
+
+create policy "Owner manages inventory movements"\
+on public.inventory_movements for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 31. PAYMENT EVENT POLICIES\
+\-- =========================================================
+
+create policy "Owner reads payment events"\
+on public.payment_events for select\
+to authenticated\
+using (public.is_store_admin());
+
+\-- Payment events are written by trusted backend operations.\
+\-- Do not allow customers to insert or update payment events.
+
+\-- =========================================================\
+\-- 32. COMMISSION POLICIES\
+\-- =========================================================
+
+create policy "Customers read own commissions"\
+on public.commissions for select\
+to authenticated\
+using (user_id = (select auth.uid()));
+
+create policy "Customers submit commissions"\
+on public.commissions for insert\
+to authenticated\
+with check (user_id = (select auth.uid()));
+
+create policy "Owner manages commissions"\
+on public.commissions for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 33. NEWSLETTER POLICIES\
+\-- =========================================================
+
+create policy "Public subscribes to newsletter"\
+on public.newsletter_subscribers for insert\
+to anon, authenticated\
+with check (\
+is_subscribed = true\
+and email <> ''\
+);
+
+create policy "Owner manages newsletter"\
+on public.newsletter_subscribers for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 34. STORE SETTINGS POLICIES\
+\-- =========================================================
+
+create policy "Public reads public store settings"\
+on public.store_settings for select\
+to anon, authenticated\
+using (is_public = true or public.is_store_admin());
+
+create policy "Owner manages store settings"\
+on public.store_settings for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 35. ADMIN NOTIFICATION POLICIES\
+\-- =========================================================
+
+create policy "Owner manages notifications"\
+on public.admin_notifications for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 36. COUPON POLICIES\
+\-- =========================================================
+
+create policy "Owner manages coupons"\
+on public.coupons for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+create policy "Customers read own coupon redemptions"\
+on public.coupon_redemptions for select\
+to authenticated\
+using (\
+user_id = (select auth.uid())\
+or public.is_store_admin()\
+);
+
+create policy "Owner manages coupon redemptions"\
+on public.coupon_redemptions for all\
+to authenticated\
+using (public.is_store_admin())\
+with check (public.is_store_admin());
+
+\-- =========================================================\
+\-- 37. AUDIT LOG POLICIES\
+\-- =========================================================
+
+create policy "Owner reads audit logs"\
+on public.audit_logs for select\
+to authenticated\
+using (public.is_store_admin());
+
+\-- Audit records should be created by trusted backend functions.
+
+\-- =========================================================\
+\-- 38. STORAGE BUCKETS\
+\-- =========================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)\
+values (\
+'product-media',\
+'product-media',\
+true,\
+10485760,\
+array['image/jpeg','image/png','image/webp']\
+)\
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)\
+values (\
+'commission-references',\
+'commission-references',\
+false,\
+10485760,\
+array['image/jpeg','image/png','image/webp']\
+)\
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)\
+values (\
+'store-assets',\
+'store-assets',\
+true,\
+10485760,\
+array['image/jpeg','image/png','image/webp','image/svg+xml']\
+)\
+on conflict (id) do nothing;
+
+\-- Public product image viewing.
+
+create policy "Public reads product media"\
+on storage.objects for select\
+to anon, authenticated\
+using (bucket_id = 'product-media');
+
+\-- Owner uploads, updates and deletes product images.
+
+create policy "Owner manages product media"\
+on storage.objects for all\
+to authenticated\
+using (\
+bucket_id = 'product-media'\
+and public.is_store_admin()\
+)\
+with check (\
+bucket_id = 'product-media'\
+and public.is_store_admin()\
+);
+
+\-- Public store asset viewing.
+
+create policy "Public reads store assets"\
+on storage.objects for select\
+to anon, authenticated\
+using (bucket_id = 'store-assets');
+
+create policy "Owner manages store assets"\
+on storage.objects for all\
+to authenticated\
+using (\
+bucket_id = 'store-assets'\
+and public.is_store_admin()\
+)\
+with check (\
+bucket_id = 'store-assets'\
+and public.is_store_admin()\
+);
+
+\-- Customer uploads to their own commission folder.\
+\-- Expected path: AUTH_USER_UUID/filename.webp
+
+create policy "Customers upload own commission references"\
+on storage.objects for insert\
+to authenticated\
+with check (\
+bucket_id = 'commission-references'\
+and (storage.foldername(name))[1] = (select auth.uid())::text\
+);
+
+create policy "Customers read own commission references"\
+on storage.objects for select\
+to authenticated\
+using (\
+bucket_id = 'commission-references'\
+and (\
+(storage.foldername(name))[1] = (select auth.uid())::text\
+or public.is_store_admin()\
+)\
+);
+
+create policy "Customers delete own commission references"\
+on storage.objects for delete\
+to authenticated\
+using (\
+bucket_id = 'commission-references'\
+and (\
+(storage.foldername(name))[1] = (select auth.uid())::text\
+or public.is_store_admin()\
+)\
+);
+
+create policy "Owner manages commission references"\
+on storage.objects for update\
+to authenticated\
+using (\
+bucket_id = 'commission-references'\
+and public.is_store_admin()\
+)\
+with check (\
+bucket_id = 'commission-references'\
+and public.is_store_admin()\
+);
+
+\-- =========================================================\
+\-- END OF INITIAL MIGRATION\
+\-- =========================================================
+
+
+
+## **4. Owner account creation and authorization**
+
+Important security step
+
+Do not create an admin username and password directly inside SQL.
+
+Use this process:
+
+1. Open Supabase → Authentication → Users.
+2. Create your owner account using your actual email.
+3. Complete email verification if enabled.
+4. Copy the owner's Supabase Auth User UUID.
+5. Run the following SQL in the SQL Editor.
+
+```
+
+-- Replace with the actual email used for the owner account.
+-- This promotes only the matching existing Auth user.
+
+insert into private.admin_users (user_id)
+select id
+from auth.users
+where lower(email) = lower('YOUR_OWNER_EMAIL')
+on conflict (user_id)
+do update set is_active = true;
+
+-- Verify owner authorization.
+select
+    u.email,
+    a.user_id,
+    a.is_active
+from private.admin_users a
+join auth.users u on u.id = a.user_id;
+
+```
+
+The owner is now authorized by a database record. Customers cannot authorize themselves through the frontend.
+
+To revoke access:
+
+```
+update private.admin_users
+set is_active = false
+where user_id = 'OWNER-USER-UUID';
+```
+
+## **5. Additional SQL permissions hardening**
+
+The migration above creates RLS policies. The following grants explicitly define which API roles can attempt each operation. RLS then decides which individual rows they can access.
+
+Run this after the initial migration.
+
+```
+
+-- Remove inherited table grants and grant minimum required access.
+revoke all on all tables in schema public from anon, authenticated;
+
+-- Public storefront reads.
+grant select on public.categories to anon, authenticated;
+grant select on public.products to anon, authenticated;
+grant select on public.product_images to anon, authenticated;
+grant select on public.store_settings to anon, authenticated;
+
+-- Customer profiles.
+grant select, update on public.profiles to authenticated;
+
+-- Customer account operations.
+grant select, insert, update, delete on public.addresses to authenticated;
+grant select, insert, update, delete on public.carts to authenticated;
+grant select, insert, update, delete on public.cart_items to authenticated;
+grant select, insert, delete on public.wishlist_items to authenticated;
+
+-- Orders: customers can read; owner policies control admin writes.
+grant select on public.orders to authenticated;
+grant select on public.order_items to authenticated;
+grant select on public.order_status_history to authenticated;
+
+-- Owner management operations.
+grant all on public.categories to authenticated;
+grant all on public.products to authenticated;
+grant all on public.product_images to authenticated;
+grant all on public.addresses to authenticated;
+grant all on public.carts to authenticated;
+grant all on public.cart_items to authenticated;
+grant all on public.wishlist_items to authenticated;
+grant all on public.orders to authenticated;
+grant all on public.order_items to authenticated;
+grant all on public.order_status_history to authenticated;
+grant all on public.inventory_movements to authenticated;
+grant select on public.payment_events to authenticated;
+grant all on public.commissions to authenticated;
+grant all on public.store_settings to authenticated;
+grant all on public.admin_notifications to authenticated;
+grant all on public.coupons to authenticated;
+grant all on public.coupon_redemptions to authenticated;
+grant select on public.audit_logs to authenticated;
+
+-- Commission submission and newsletter signup.
+grant insert, select on public.commissions to authenticated;
+grant insert on public.newsletter_subscribers to anon, authenticated;
+grant select, update, delete on public.newsletter_subscribers to authenticated;
+
+-- Backend service role: trusted server-side operations.
+grant all on all tables in schema public to service_role;
+
+```
+
+The `service_role` grant is for trusted backend execution only. Never initialize a browser client with that key.
+
+**Migration management:** Save the SQL as `supabase/migrations/001_initial_schema.sql` (using a timestamped filename in a real Supabase CLI project). Keep future changes in new migration files. A direct SQL Editor execution does not automatically create a corresponding local migration-history file.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://supabase.com\&sz=32)
+
+Supabase Docs+1
+
+
+
+# **Part 2C — Backend workflows the coding agent must implement**
+
+A database schema alone does not make an e-commerce platform functional. The following operations need trusted server-side implementation.
+
+| Operation            | Execution location                  |
+| -------------------- | ----------------------------------- |
+| Product CRUD         | Authenticated owner + RLS           |
+| Artwork uploads      | Supabase Storage + Storage policies |
+| Customer cart        | Authenticated Supabase client + RLS |
+| Order creation       | Edge Function                       |
+| Stock reservation    | PostgreSQL transaction              |
+| Payment initiation   | Edge Function                       |
+| Payment verification | Edge Function + provider signature  |
+| Webhook processing   | Edge Function                       |
+| Refund processing    | Edge Function                       |
+| Admin analytics      | Authorized database queries         |
+| Audit logging        | Trusted backend                     |
+
+### **Critical: prevent overselling**
+
+For original one-of-one artwork, two customers must never successfully purchase the same last item.
+
+Implement stock deduction atomically inside a database transaction, with row locking or a conditional update.
+
+For example, the essential database operation is:
+
+```
+update public.products
+set stock_quantity = stock_quantity - 1
+where id = 'PRODUCT_UUID'
+  and track_inventory = true
+  and stock_quantity >= 1;
+```
+
+The backend must check that exactly one row was updated. This is only the core stock operation; the complete checkout workflow must also handle transaction rollback, order creation, reservations, expiry and payment failure.
+
+### **Critical: prevent duplicate payment processing**
+
+Store the provider's unique webhook event ID in `payment_events`.
+
+Use the unique constraint on `(provider, provider_event_id)` to reject duplicate events. Verify the webhook signature before recording a payment as successful.
+
+Do not deduct stock again when the same payment event is retried.
+
+# **Part 2D — Supabase credentials and safe connection**
+
+This is especially important because you mentioned that the coding agent might ask you for Supabase credentials.
+
+**Safe credential handling**
+
+Frontend-safe configuration
+
+**Supabase Project URL**
+
+**Supabase Publishable Key**
+
+These can be configured in the frontend environment, provided RLS and appropriate grants are enabled.
+
+Never expose
+
+**Database password**
+
+**Supabase Secret Key / Service Role Key**
+
+**Razorpay Secret Key**
+
+**Stripe Secret Key**
+
+Keep these in trusted server-side environment variables or Supabase Edge Function Secrets. Never place them in React code, public GitHub repositories, or browser storage.
+
+### **Frontend environment configuration**
+
+The coding agent should create a `.env.local` file:
+
+```
+VITE_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+```
+
+These are public frontend configuration values, not private credentials.
+
+Add `.env.local` to `.gitignore`.
+
+The application should initialize Supabase using `@supabase/supabase-js` and validate that both variables exist.
+
+### **Backend secrets**
+
+Configure the following through Supabase Dashboard → Edge Functions → Secrets:
+
+```
+RAZORPAY_KEY_ID=YOUR_KEY_ID
+RAZORPAY_KEY_SECRET=YOUR_SECRET
+RAZORPAY_WEBHOOK_SECRET=YOUR_WEBHOOK_SECRET
+
+STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET
+STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
+```
+
+Only configure the payment provider you actually use initially. Never put these values in a `VITE_` variable.
+
+Supabase provides dedicated secret management for Edge Functions.&#x20;
+
+[image](https://www.google.com/s2/favicons?domain=https://supabase.com\&sz=32)
+
+Supabase Docs+2
+
+
+
+**The coding agent must follow this credential protocol:**
+
+1. Inspect the project and check whether Supabase is already configured.
+2. Ask for the project URL and publishable key only if they are missing.
+3. Create the local environment configuration.
+4. Ask you to execute the SQL migration in Supabase SQL Editor, or use an explicitly authorized secure database integration if available.
+5. Verify that the tables and policies exist.
+6. Help you configure backend secrets through the Supabase Dashboard.
+7. Verify the authentication and database connection.
+8. Never print or log secret values.
+
+Do not paste your database password or secret/service-role key into this conversation or into an ordinary AI coding prompt.
+
+# **Part 2E — Final implementation and security checklist**
+
+**Deployment readiness**
+
+0/15 verified
+
+Part 1 codebase inspected and preserved
+
+Supabase project connected
+
+Initial SQL migration executed successfully
+
+All database tables and relationships verified
+
+RLS policies and grants tested
+
+Owner account authorized
+
+Storage buckets and policies verified
+
+Product CRUD and artwork uploads working
+
+Inventory transactions tested
+
+Customer carts and addresses isolated
+
+Order management synchronized
+
+Payment webhooks verified
+
+Admin analytics connected to real records
+
+Store settings synchronized with storefront
+
+No private credentials exposed in frontend or GitHub
+
+Reset checklist
+
+## **Recommended build sequence**
+
+| Priority | Deliverable                        |
+| -------- | ---------------------------------- |
+| 1        | Execute SQL and configure Supabase |
+| 2        | Connect Part 1 storefront          |
+| 3        | Secure owner authentication        |
+| 4        | Build admin dashboard              |
+| 5        | Product and inventory management   |
+| 6        | Order and customer management      |
+| 7        | Analytics and store settings       |
+| 8        | Payment integration and testing    |
+
+## **Important final architectural decisions**
+
+Three things should not be compromised:
+
+1. **One source of truth:** Both storefront and dashboard read and write to the same Supabase database.
+2. **Security before convenience:** RLS, owner authorization and server-side payment verification must work before production launch.
+3. **Historical integrity:** Deleting or changing a product must never alter the original product name, price or quantity recorded in a completed order.
+
+The SQL provided is an initial foundation, not a complete production payment implementation. The coding agent must still implement and test transactional checkout, stock reservations, payment verification, webhook handling, refunds and analytics queries.
+
+Official technical references:
+
+- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security?utm_source=chatgpt.com)
+- [Supabase Data Security](https://supabase.com/docs/guides/database/secure-data?utm_source=chatgpt.com)
+- [Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations?utm_source=chatgpt.com)
+- [Edge Function Secrets](https://supabase.com/docs/guides/functions/secrets?utm_source=chatgpt.com)
+
+**Final result:** VARNIKS_ATELIER becomes a complete single-owner e-commerce platform, with a customer storefront, private business management dashboard, PostgreSQL database, secure authentication, inventory management and payment infrastructure.

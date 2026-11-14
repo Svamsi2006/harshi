@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 ];
 
 export const Navbar: React.FC = () => {
-  const { cartCount, openCartDrawer, openSearch, user } = useStore();
+  const { cartCount, openCartDrawer, openSearch, user, isAdmin } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -65,8 +65,17 @@ export const Navbar: React.FC = () => {
             ))}
           </nav>
 
-          {/* Right: Search, Account, Cart */}
+          {/* Right: Search, Admin/Account, Cart */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-xs font-medium transition-colors"
+              >
+                Admin Studio
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={openSearch}
@@ -77,10 +86,10 @@ export const Navbar: React.FC = () => {
             </button>
 
             <Link
-              to={user ? '/account' : '/login'}
+              to={isAdmin ? '/admin' : user ? '/account' : '/login'}
               className="p-2.5 text-[#2B2623] hover:text-[#C86D51] hover:bg-[#F3EDE2]/70 rounded-xl transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#C86D51]"
-              aria-label={user ? 'Customer account' : 'Sign in to account'}
-              title={user ? user.fullName : 'Sign in'}
+              aria-label={isAdmin ? 'Admin studio dashboard' : user ? 'Customer account' : 'Sign in to account'}
+              title={isAdmin ? 'Admin Studio Dashboard' : user ? user.fullName : 'Sign in'}
             >
               <User className="w-[19px] h-[19px]" strokeWidth={1.75} />
             </Link>

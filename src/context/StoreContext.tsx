@@ -4,18 +4,31 @@ import type {
   CartHistoryAction,
   CartHistoryEntry,
   CartItem,
+  CommissionRequest,
+  Coupon,
   CustomerUser,
   Order,
+  OrderStatus,
   PaymentMethod,
+  Product,
+  StoreSettings,
   ToastMessage,
 } from '../types';
-import { getProductById } from '../data/products';
-import { DEMO_CUSTOMER } from '../data/mockAccount';
-import { storeService } from '../services/storeService';
+import { DEMO_CUSTOMER, DEMO_OWNER, storeService } from '../services/storeService';
+import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '../utils/format';
+
+export interface SupabaseSyncStatus {
+  configured: boolean;
+  tablesReady: boolean;
+  missingTables: string[];
+  checked: boolean;
+}
 
 interface StoreContextValue {
   user: CustomerUser | null;
+  isAdmin: boolean;
+  products: Product[];
   cart: CartItem[];
   cartCount: number;
   cartSubtotal: number;
@@ -24,11 +37,17 @@ interface StoreContextValue {
   cartHistory: CartHistoryEntry[];
   addresses: Address[];
   orders: Order[];
+  allOrders: Order[];
+  commissions: CommissionRequest[];
+  coupons: Coupon[];
+  storeSettings: StoreSettings;
   recentSearches: string[];
   isCartDrawerOpen: boolean;
   isSearchOpen: boolean;
   toasts: ToastMessage[];
   lastPlacedOrder: Order | null;
+  supabaseStatus: SupabaseSyncStatus;
+  refreshSupabaseSync: () => Promise<void>;
 
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
@@ -37,8 +56,12 @@ interface StoreContextValue {
   addToast: (title: string, subtitle?: string, type?: ToastMessage['type']) => void;
   dismissToast: (id: string) => void;
 
-  loginWithCredentials: (email: string, password: string) => { ok: boolean; error?: string };
+  loginWithCredentials: (
+    email: string,
+    password: string
+  ) => { ok: boolean; user?: CustomerUser; error?: string };
   loginAsDemoCustomer: () => void;
+  loginAsDemoOwner: () => void;
   registerCustomer: (data: {
     fullName: string;
     email: string;
@@ -47,6 +70,16 @@ interface StoreContextValue {
   }) => { ok: boolean; error?: string };
   updateProfile: (data: { fullName: string; email: string; phone: string }) => void;
   logout: () => void;
+
+  addProduct: (data: Omit<Product, 'id' | 'createdAt'>) => Product;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (id: string) => void;
+  duplicateProduct: (id: string) => Product | null;
+
+  updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
+  updateCommissionStatus: (id: string, status: CommissionRequest['status'], quotedPrice?: number, internalNotes?: string) => void;
+  saveCoupons: (coupons: Coupon[]) => void;
+  saveStoreSettings: (settings: StoreSettings) => void;
 
   addToCart: (productId: string, quantity?: number, openDrawer?: boolean) => boolean;
   updateCartQuantity: (productId: string, quantity: number) => void;
@@ -77,14 +110,19 @@ const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<CustomerUser | null>(() => storeService.getCurrentUser());
   const userId = user?.id ?? null;
+  const isAdmin = user?.role === 'owner';
 
+  const [products, setProducts] = useState<Product[]>(() => storeService.getProducts());
   const [cart, setCart] = useState<CartItem[]>(() => storeService.getCart(userId));
   const [wishlist, setWishlist] = useState<string[]>(() => storeService.getWishlist(userId));
   const [cartHistory, setCartHistory] = useState<CartHistoryEntry[]>(() =>
     storeService.getCartHistory(userId)
   );
   const [addresses, setAddresses] = useState<Address[]>(() => storeService.getAddresses(userId));
-  const [orders, setOrders] = useState<Order[]>(() => storeService.getOrders(userId));
+  const [allOrders, setAllOrders] = useState<Order[]>(() => storeService.getAllOrders());
+  const [commissions, setCommissions] = useState<CommissionRequest[]>(() => storeService.getCommissions());
+  const [coupons, setCoupons] = useState<Coupon[]>(() => storeService.getCoupons());
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => storeService.getStoreSettings());
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     storeService.getRecentSearches()
   );
@@ -93,14 +131,75 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
+  const [supabaseStatus, setSupabaseStatus] = useState<SupabaseSyncStatus>({
+    configured: false,
+    tablesReady: false,
+    missingTables: [],
+    checked: false,
+  });
 
-  // Reload account-isolated state whenever active customer changes
+  const refreshSupabaseSync = useCallback(async () => {
+    try {
+      const statusRes = await fetch('/api/supabase/status');
+      if (!statusRes.ok) return;
+      const statusJson = await statusRes.json();
+      setSupabaseStatus({
+        configured: Boolean(statusJson.configured),
+        tablesReady: Boolean(statusJson.tablesReady),
+        missingTables: Array.isArray(statusJson.missingTables) ? statusJson.missingTables : [],
+        checked: true,
+      });
+
+      if (!statusJson.tablesReady) return;
+
+      const bootRes = await fetch('/api/bootstrap');
+      if (!bootRes.ok) return;
+      const boot = await bootRes.json();
+      if (!boot.synced) return;
+
+      if (Array.isArray(boot.products) && boot.products.length > 0) {
+        storeService.saveProducts(boot.products);
+        setProducts(boot.products);
+      } else {
+        await fetch('/api/products/seed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: storeService.getProducts() || DEFAULT_PRODUCTS }),
+        });
+      }
+
+      if (Array.isArray(boot.orders) && boot.orders.length > 0) {
+        storeService.saveAllOrders(boot.orders);
+        setAllOrders(boot.orders);
+      }
+      if (Array.isArray(boot.commissions) && boot.commissions.length > 0) {
+        storeService.saveCommissions(boot.commissions);
+        setCommissions(boot.commissions);
+      }
+      if (Array.isArray(boot.coupons) && boot.coupons.length > 0) {
+        storeService.saveCoupons(boot.coupons);
+        setCoupons(boot.coupons);
+      }
+      if (boot.settings) {
+        storeService.saveStoreSettings(boot.settings);
+        setStoreSettings(boot.settings);
+      }
+    } catch {
+      // Offline / client-only fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSupabaseSync();
+  }, [refreshSupabaseSync]);
+
   useEffect(() => {
     setCart(storeService.getCart(userId));
     setWishlist(storeService.getWishlist(userId));
     setCartHistory(storeService.getCartHistory(userId));
     setAddresses(storeService.getAddresses(userId));
-    setOrders(storeService.getOrders(userId));
+    setAllOrders(storeService.getAllOrders());
+    setCommissions(storeService.getCommissions());
   }, [userId]);
 
   const dismissToast = useCallback((id: string) => {
@@ -116,6 +215,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }, 3200);
     },
     [dismissToast]
+  );
+
+  const getProductById = useCallback(
+    (id: string) => products.find((p) => p.id === id),
+    [products]
   );
 
   const recordCartHistory = useCallback(
@@ -136,7 +240,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [userId]
+    [getProductById, userId]
   );
 
   const addToCart = useCallback(
@@ -180,7 +284,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       return true;
     },
-    [addToast, userId]
+    [addToast, getProductById, userId]
   );
 
   const updateCartQuantity = useCallback(
@@ -198,9 +302,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       const clamped = Math.min(quantity, product.stock);
-      if (quantity > product.stock) {
-        addToast(`Maximum ${product.stock} available`, product.name, 'info');
-      }
       setCart((prev) => {
         const next = prev.map((i) =>
           i.productId === productId ? { ...i, quantity: clamped } : i
@@ -209,7 +310,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [addToast, recordCartHistory, userId]
+    [getProductById, recordCartHistory, userId]
   );
 
   const removeFromCart = useCallback(
@@ -228,7 +329,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addToast('Removed from bag', product.name, 'info');
       }
     },
-    [addToast, recordCartHistory, userId]
+    [addToast, getProductById, recordCartHistory, userId]
   );
 
   const saveCartItemForLater = useCallback(
@@ -245,7 +346,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addToast('Saved for later', `${product.name} moved to saved items`, 'info');
       }
     },
-    [addToast, removeFromCart, userId]
+    [addToast, getProductById, removeFromCart, userId]
   );
 
   const clearCart = useCallback(() => {
@@ -270,7 +371,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [addToast, userId]
+    [addToast, getProductById, userId]
   );
 
   const isWishlisted = useCallback(
@@ -279,21 +380,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const loginWithCredentials = useCallback(
-    (email: string, password: string): { ok: boolean; error?: string } => {
+    (
+      email: string,
+      password: string
+    ): { ok: boolean; user?: CustomerUser; error?: string } => {
       const normalized = email.trim().toLowerCase();
       const users = storeService.getRegisteredUsers();
       const matched = users.find((u) => u.email.toLowerCase() === normalized);
       if (!matched) {
         return { ok: false, error: 'No account found with that email address.' };
       }
-      if (matched.password !== password) {
+      if (matched.password && matched.password !== password) {
         return { ok: false, error: 'Incorrect password. Please try again.' };
       }
       const { password: _pwd, ...cleanUser } = matched;
       storeService.setCurrentUser(cleanUser);
       setUser(cleanUser);
-      addToast(`Welcome back, ${cleanUser.fullName.split(' ')[0]}`, undefined, 'success');
-      return { ok: true };
+      addToast(
+        `Welcome back, ${cleanUser.fullName.split(' ')[0]}`,
+        cleanUser.role === 'owner' ? 'Studio Admin Workspace' : undefined,
+        'success'
+      );
+      return { ok: true, user: cleanUser };
     },
     [addToast]
   );
@@ -302,6 +410,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     storeService.setCurrentUser(DEMO_CUSTOMER);
     setUser(DEMO_CUSTOMER);
     addToast('Signed in as Ananya Deshmukh', 'Demo customer account active', 'success');
+  }, [addToast]);
+
+  const loginAsDemoOwner = useCallback(() => {
+    storeService.setCurrentUser(DEMO_OWNER);
+    setUser(DEMO_OWNER);
+    addToast('Signed in as Studio Owner', 'Admin Dashboard access granted', 'success');
   }, [addToast]);
 
   const registerCustomer = useCallback(
@@ -321,6 +435,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         email: data.email.trim().toLowerCase(),
         phone: data.phone.trim(),
         joinedAt: new Date().toISOString().split('T')[0],
+        role: 'customer',
       };
       storeService.registerUser(newUser, data.password);
       setUser(newUser);
@@ -351,6 +466,120 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUser(null);
     addToast('Signed out', 'See you again soon at the studio.', 'info');
   }, [addToast]);
+
+  // Admin Product Management (Local + Supabase Sync)
+  const addProduct = useCallback(
+    (data: Omit<Product, 'id' | 'createdAt'>) => {
+      const created = storeService.addProduct(data);
+      setProducts(storeService.getProducts());
+      void fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(created),
+      }).catch(() => {});
+      addToast('Product added successfully', created.name, 'success');
+      return created;
+    },
+    [addToast]
+  );
+
+  const updateProduct = useCallback(
+    (product: Product) => {
+      storeService.updateProduct(product);
+      setProducts(storeService.getProducts());
+      void fetch(`/api/products/${encodeURIComponent(product.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+      }).catch(() => {});
+      addToast('Product updated', product.name, 'success');
+    },
+    [addToast]
+  );
+
+  const deleteProduct = useCallback(
+    (id: string) => {
+      const p = products.find((x) => x.id === id);
+      storeService.deleteProduct(id);
+      setProducts(storeService.getProducts());
+      void fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+      addToast('Product removed', p?.name ?? id, 'info');
+    },
+    [addToast, products]
+  );
+
+  const duplicateProduct = useCallback(
+    (id: string) => {
+      const dup = storeService.duplicateProduct(id);
+      if (dup) {
+        setProducts(storeService.getProducts());
+        void fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dup),
+        }).catch(() => {});
+        addToast('Product duplicated', dup.name, 'success');
+      }
+      return dup;
+    },
+    [addToast]
+  );
+
+  const updateOrderStatus = useCallback(
+    (orderId: string, status: OrderStatus, trackingCode?: string) => {
+      storeService.updateOrderStatus(orderId, status, trackingCode);
+      setAllOrders(storeService.getAllOrders());
+      void fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderStatus: status, trackingCode }),
+      }).catch(() => {});
+      addToast('Order status updated', `Order #${orderId} set to ${status}`, 'success');
+    },
+    [addToast]
+  );
+
+  const updateCommissionStatus = useCallback(
+    (id: string, status: CommissionRequest['status'], quotedPrice?: number, internalNotes?: string) => {
+      storeService.updateCommissionStatus(id, status, quotedPrice, internalNotes);
+      setCommissions(storeService.getCommissions());
+      void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, quotedPrice, internalNotes }),
+      }).catch(() => {});
+      addToast('Commission updated', `Request ${id} status: ${status}`, 'success');
+    },
+    [addToast]
+  );
+
+  const saveCoupons = useCallback(
+    (newCoupons: Coupon[]) => {
+      storeService.saveCoupons(newCoupons);
+      setCoupons(newCoupons);
+      void fetch('/api/coupons', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupons: newCoupons }),
+      }).catch(() => {});
+      addToast('Coupons saved', undefined, 'success');
+    },
+    [addToast]
+  );
+
+  const saveStoreSettings = useCallback(
+    (settings: StoreSettings) => {
+      storeService.saveStoreSettings(settings);
+      setStoreSettings(settings);
+      void fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      }).catch(() => {});
+      addToast('Store settings saved', undefined, 'success');
+    },
+    [addToast]
+  );
 
   const addAddress = useCallback(
     (addr: Omit<Address, 'id'>) => {
@@ -420,7 +649,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const product = getProductById(item.productId);
         return sum + (product ? product.price * item.quantity : 0);
       }, 0),
-    [cart]
+    [cart, getProductById]
   );
 
   const shippingFee = useMemo(() => {
@@ -470,6 +699,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         id: `ord-${Date.now()}`,
         orderNumber: `VA-2026-${num}`,
         customerId: userId ?? 'guest',
+        customerName: user?.fullName ?? shippingAddress.fullName,
+        customerEmail: user?.email ?? 'customer@example.com',
         date: new Date().toISOString().split('T')[0],
         items: orderItems,
         subtotal,
@@ -481,24 +712,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orderStatus: 'Pending',
         shippingAddress,
         trackingCode: `VA-TRK-${num}`,
+        courierName: 'Blue Dart Express',
         estimatedDelivery,
       };
 
-      // Move checked-out items into Cart History
       orderItems.forEach((item) => {
         recordCartHistory(item.productId, item.quantity, 'checked_out');
       });
 
-      setOrders((prev) => {
-        const next = [newOrder, ...prev];
-        storeService.saveOrders(next, userId);
-        return next;
-      });
+      storeService.saveUserOrder(newOrder, userId);
+      setAllOrders(storeService.getAllOrders());
+      void fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      }).catch(() => {});
       setLastPlacedOrder(newOrder);
       clearCart();
       return newOrder;
     },
-    [cart, clearCart, recordCartHistory, userId]
+    [cart, clearCart, getProductById, recordCartHistory, user, userId]
   );
 
   const addRecentSearch = useCallback((query: string) => {
@@ -519,10 +752,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     storeService.saveRecentSearches([]);
   }, []);
 
+  const orders = useMemo(() => {
+    if (!userId) return [];
+    return allOrders.filter((o) => o.customerId === userId);
+  }, [allOrders, userId]);
+
   return (
     <StoreContext.Provider
       value={{
         user,
+        isAdmin,
+        products,
         cart,
         cartCount,
         cartSubtotal,
@@ -531,11 +771,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cartHistory,
         addresses,
         orders,
+        allOrders,
+        commissions,
+        coupons,
+        storeSettings,
         recentSearches,
         isCartDrawerOpen,
         isSearchOpen,
         toasts,
         lastPlacedOrder,
+        supabaseStatus,
+        refreshSupabaseSync,
         openCartDrawer: () => setIsCartDrawerOpen(true),
         closeCartDrawer: () => setIsCartDrawerOpen(false),
         openSearch: () => setIsSearchOpen(true),
@@ -544,9 +790,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dismissToast,
         loginWithCredentials,
         loginAsDemoCustomer,
+        loginAsDemoOwner,
         registerCustomer,
         updateProfile,
         logout,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        duplicateProduct,
+        updateOrderStatus,
+        updateCommissionStatus,
+        saveCoupons,
+        saveStoreSettings,
         addToCart,
         updateCartQuantity,
         removeFromCart,

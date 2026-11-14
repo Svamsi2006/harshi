@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Pencil, Check, Heart } from 'lucide-react';
-import { PRODUCTS } from '../../data/products';
+import { Pencil, Check, Heart, LayoutDashboard } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { PageTransition } from '../../components/common/PageTransition';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -9,7 +8,7 @@ import { AccountSidebar } from '../../components/account/AccountSidebar';
 import { ProductGrid } from '../../components/product/ProductGrid';
 
 export const AccountPage: React.FC = () => {
-  const { user, updateProfile, wishlist, loginAsDemoCustomer } = useStore();
+  const { user, isAdmin, products, updateProfile, wishlist, loginAsDemoCustomer } = useStore();
   const [searchParams] = useSearchParams();
   const isSettingsTab = searchParams.get('tab') === 'settings';
 
@@ -50,7 +49,7 @@ export const AccountPage: React.FC = () => {
     );
   }
 
-  const savedProducts = PRODUCTS.filter((p) => wishlist.includes(p.id));
+  const savedProducts = products.filter((p) => wishlist.includes(p.id));
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +61,26 @@ export const AccountPage: React.FC = () => {
   return (
     <PageTransition className="py-10 sm:py-14">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {isAdmin && (
+          <div className="mb-6 p-4 rounded-2xl bg-[#F3EDE2] border border-[#C86D51]/40 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <LayoutDashboard className="w-5 h-5 text-[#C86D51]" />
+              <div>
+                <p className="text-sm font-semibold text-[#2B2623]">Studio Owner Session Active</p>
+                <p className="text-xs text-[#6E655F]">
+                  Manage products, inventory, orders, and Supabase settings from your Admin Portal.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/admin"
+              className="px-4 py-2 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-xs font-medium transition-colors"
+            >
+              Open Admin Dashboard →
+            </Link>
+          </div>
+        )}
+
         <div className="mb-8">
           <p className="font-handwritten text-2xl text-[#C86D51]">Customer Portal</p>
           <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">

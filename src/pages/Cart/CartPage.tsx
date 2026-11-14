@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Tag, Check } from 'lucide-react';
-import { PRODUCTS } from '../../data/products';
 import { useStore } from '../../context/StoreContext';
 import { formatINR } from '../../utils/format';
 import { PageTransition } from '../../components/common/PageTransition';
@@ -10,20 +9,35 @@ import { CartItemRow } from '../../components/cart/CartItem';
 import { ProductGrid } from '../../components/product/ProductGrid';
 
 export const CartPage: React.FC = () => {
-  const { cart, cartCount, cartSubtotal, shippingFee, addToast } = useStore();
+  const { products, coupons, cart, cartCount, cartSubtotal, shippingFee, addToast } = useStore();
   const navigate = useNavigate();
 
   const [promoCode, setPromoCode] = useState('');
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
 
-  const discount = appliedCode === 'STUDIO10' ? Math.round(cartSubtotal * 0.1) : 0;
+  const matchedCoupon = coupons.find((c) => c.code === appliedCode && c.isActive);
+  const discount = matchedCoupon
+    ? matchedCoupon.discountType === 'percentage'
+      ? Math.round((cartSubtotal * matchedCoupon.discountValue) / 100)
+      : matchedCoupon.discountValue
+    : appliedCode === 'STUDIO10'
+      ? Math.round(cartSubtotal * 0.1)
+      : 0;
   const finalTotal = Math.max(0, cartSubtotal + shippingFee - discount);
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = promoCode.trim().toUpperCase();
     if (!cleaned) return;
-    if (cleaned === 'STUDIO10' || cleaned === 'VARNIKS10') {
+    const found = coupons.find((c) => c.code.toUpperCase() === cleaned && c.isActive);
+    if (found) {
+      if (cartSubtotal < found.minimumOrder) {
+        addToast('Minimum order not met', `Spend at least ${formatINR(found.minimumOrder)} to apply ${found.code}.`, 'info');
+        return;
+      }
+      setAppliedCode(found.code);
+      addToast('Studio promo applied', `${found.code} discount added`, 'success');
+    } else if (cleaned === 'STUDIO10' || cleaned === 'VARNIKS10') {
       setAppliedCode('STUDIO10');
       addToast('Studio promo applied', '10% welcome discount added', 'success');
     } else {
@@ -31,7 +45,7 @@ export const CartPage: React.FC = () => {
     }
   };
 
-  const suggested = PRODUCTS.filter(
+  const suggested = products.filter(
     (p) => !cart.some((c) => c.productId === p.id)
   ).slice(0, 4);
 

@@ -158,7 +158,15 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="mt-12 pt-6 border-t border-[#EAE3D5] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6E655F]">
-          <p>© {new Date().getFullYear()} varniks_atelier. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <p>© {new Date().getFullYear()} varniks_atelier. All rights reserved.</p>
+            <Link
+              to="/admin/login"
+              className="text-[#6E655F] hover:text-[#C86D51] underline underline-offset-4 transition-colors"
+            >
+              Studio Admin
+            </Link>
+          </div>
           <p className="font-handwritten text-base text-[#6E655F]">
             Made with love for art lovers ♡
           </p>
