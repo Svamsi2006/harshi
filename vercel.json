@@ -3,89 +3,17 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "maxDuration": 60
     }
   },
   "rewrites": [
     {
-      "source": "/api/supabase/status",
-      "destination": "/api/status"
+      "source": "/api/(.*)",
+      "destination": "/api/index?__path=$1"
     },
     {
-      "source": "/api/chat/logs",
-      "destination": "/api/chat-logs"
-    },
-    {
-      "source": "/admin/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/account/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/shop/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/product/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/search/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/commission/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/artist-story/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/policies/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/about-us",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/custom-orders",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/cart",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/checkout",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/order-success",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/register",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/forgot-password",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/contact",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/faq",
+      "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]

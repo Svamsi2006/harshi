@@ -323,9 +323,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const addToast = useCallback(
-    (title: string, subtitle?: string, type: ToastMessage['type'] = 'success') => {
+    (title: unknown, subtitle?: unknown, type: ToastMessage['type'] = 'success') => {
+      const safeTitle = getErrorMessage(title, 'Studio notification');
+      const safeSubtitle =
+        subtitle === undefined || subtitle === null
+          ? undefined
+          : getErrorMessage(subtitle, '');
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      setToasts((prev) => [...prev.slice(-2), { id, title, subtitle, type }]);
+      setToasts((prev) => [
+        ...prev.slice(-2),
+        { id, title: safeTitle, subtitle: safeSubtitle || undefined, type },
+      ]);
       window.setTimeout(() => {
         dismissToast(id);
       }, 3200);
@@ -628,12 +636,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json.error) {
-          addToast(
-            'Product saved locally',
-            json.error || 'Run Supabase SQL tables to sync remotely.',
-            'info'
-          );
-          return { ok: true, product: created, synced: false, error: json.error };
+          const msg = getErrorMessage(json.error, 'Run Supabase SQL tables to sync remotely.');
+          addToast('Product saved locally', msg, 'info');
+          return { ok: true, product: created, synced: false, error: msg };
         }
         if (json.synced && json.product) {
           storeService.updateProduct(json.product);
@@ -664,12 +669,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json.error) {
-          addToast(
-            'Updated locally — Supabase sync issue',
-            json.error || `HTTP ${res.status}`,
-            'error'
-          );
-          return { ok: true, synced: false, error: json.error || `HTTP ${res.status}` };
+          const msg = getErrorMessage(json.error, `HTTP ${res.status}`);
+          addToast('Updated locally — Supabase sync issue', msg, 'error');
+          return { ok: true, synced: false, error: msg };
         }
         if (json.synced && json.product) {
           storeService.updateProduct(json.product);
@@ -697,12 +699,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json.error) {
-          addToast(
-            'Removed locally — Supabase sync notice',
-            json.error || `HTTP ${res.status}`,
-            'error'
-          );
-          return { ok: true, synced: false, error: json.error || `HTTP ${res.status}` };
+          const msg = getErrorMessage(json.error, `HTTP ${res.status}`);
+          addToast('Removed locally — Supabase sync notice', msg, 'error');
+          return { ok: true, synced: false, error: msg };
         }
         addToast('Product removed', p?.name ?? id, 'info');
         return { ok: true, synced: Boolean(json.synced) };

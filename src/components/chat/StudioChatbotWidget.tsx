@@ -76,11 +76,17 @@ export const StudioChatbotWidget: React.FC = () => {
         }),
       });
       const json = await res.json().catch(() => ({}));
+      const errText =
+        typeof json.error === 'string'
+          ? json.error
+          : json.error && typeof json.error === 'object' && 'message' in json.error
+            ? String((json.error as { message?: unknown }).message || 'Unavailable')
+            : '';
       const replyText =
         res.ok && json.reply
           ? String(json.reply)
-          : json.error
-            ? `Oops! Studio assistant hit a snag: ${json.error}`
+          : errText
+            ? `Oops! Studio assistant hit a snag: ${errText}`
             : 'I could not reach the studio assistant right now. Try browsing Shop All Works or Custom Orders!';
 
       setMessages((prev) => [

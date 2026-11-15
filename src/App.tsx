@@ -44,6 +44,55 @@ import { AdminDiscountsPage } from './pages/Admin/AdminDiscountsPage';
 import { AdminContentPage } from './pages/Admin/AdminContentPage';
 import { AdminSettingsPage } from './pages/Admin/AdminSettingsPage';
 
+class StudioErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'An unexpected rendering issue occurred.';
+    return { hasError: true, message };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-lg mx-auto my-16 p-8 rounded-3xl bg-white border border-[#E7C7CC] shadow-warm text-center space-y-4">
+          <h2 className="font-display text-2xl font-medium text-[#3E2F27]">
+            Something paused in the studio
+          </h2>
+          <p className="text-sm text-[#7A655C] break-words">{this.state.message}</p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 rounded-xl bg-[#6D1836] text-[#FFF9F5] text-sm font-medium"
+            >
+              Reload Studio
+            </button>
+            <a
+              href="/"
+              className="px-5 py-2.5 rounded-xl border border-[#E7C7CC] text-sm font-medium text-[#3E2F27]"
+            >
+              Back to Home
+            </a>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -81,7 +130,8 @@ const AppShell: React.FC = () => {
       {!isAdminRoute && <Navbar />}
 
       <main className="relative z-[2] flex-1">
-        <Routes>
+        <StudioErrorBoundary>
+          <Routes>
           {/* Customer Storefront Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/shop" element={<ShopPage />} />
@@ -229,7 +279,8 @@ const AppShell: React.FC = () => {
               </div>
             }
           />
-        </Routes>
+          </Routes>
+        </StudioErrorBoundary>
       </main>
 
       {!isAdminRoute && <Footer />}
