@@ -9,7 +9,39 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api(?:/|$)).*)",
+      "source": "/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/account/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/shop/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/product/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/commission/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/artist-story/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/policies/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
