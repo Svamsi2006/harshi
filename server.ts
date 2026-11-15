@@ -8,8 +8,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseSecretKey =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  '';
 
 const supabase: SupabaseClient | null =
   supabaseUrl && supabaseSecretKey
@@ -358,7 +362,13 @@ export function createApp() {
   app.use(express.json({ limit: '10mb' }));
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, supabaseConfigured: Boolean(supabase) });
+    res.json({
+      ok: true,
+      supabaseConfigured: Boolean(supabase),
+      hasSupabaseUrl: Boolean(supabaseUrl),
+      hasSupabaseSecretKey: Boolean(supabaseSecretKey),
+      vercel: process.env.VERCEL === '1',
+    });
   });
 
   app.get('/api/supabase/status', async (_req, res) => {

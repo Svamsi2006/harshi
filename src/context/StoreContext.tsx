@@ -24,6 +24,7 @@ export interface SupabaseSyncStatus {
   configured: boolean;
   tablesReady: boolean;
   missingTables: string[];
+  error?: string;
   checked: boolean;
 }
 
@@ -191,12 +192,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshSupabaseSync = useCallback(async () => {
     try {
       const statusRes = await fetch('/api/supabase/status');
-      if (!statusRes.ok) return;
-      const statusJson = await statusRes.json();
+      const statusJson = await statusRes.json().catch(() => ({}));
+      if (!statusRes.ok) {
+        setSupabaseStatus({
+          configured: false,
+          tablesReady: false,
+          missingTables: [],
+          error: statusJson.error || `API returned HTTP ${statusRes.status}`,
+          checked: true,
+        });
+        return;
+      }
       setSupabaseStatus({
         configured: Boolean(statusJson.configured),
         tablesReady: Boolean(statusJson.tablesReady),
         missingTables: Array.isArray(statusJson.missingTables) ? statusJson.missingTables : [],
+        error: typeof statusJson.error === 'string' ? statusJson.error : undefined,
         checked: true,
       });
 
@@ -237,8 +248,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         storeService.saveStoreSettings(boot.settings);
         setStoreSettings(boot.settings);
       }
-    } catch {
-      // Offline / client-only fallback
+    } catch (error) {
+      setSupabaseStatus({
+        configured: false,
+        tablesReady: false,
+        missingTables: [],
+        error: error instanceof Error ? error.message : 'Could not reach the Supabase API',
+        checked: true,
+      });
     }
   }, []);
 

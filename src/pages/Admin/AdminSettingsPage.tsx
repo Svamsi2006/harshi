@@ -212,10 +212,17 @@ export const AdminSettingsPage: React.FC = () => {
               <AlertTriangle className="w-4 h-4 text-[#6D1836] shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold">
-                  {supabaseStatus.configured
+                  {supabaseStatus.error
+                    ? 'Supabase API unavailable'
+                    : supabaseStatus.configured
                     ? 'Supabase connected — waiting for SQL tables'
                     : 'Running in Studio Local Storage Mode'}
                 </p>
+                {supabaseStatus.error && (
+                  <p className="mt-1 text-[#7A655C]">
+                    {supabaseStatus.error}. Confirm the Vercel deployment includes the API function and redeploy after changing environment variables.
+                  </p>
+                )}
                 {supabaseStatus.missingTables.length > 0 && (
                   <p className="mt-1 text-[#7A655C]">
                     Missing tables: <span className="font-mono">{supabaseStatus.missingTables.join(', ')}</span>.
