@@ -325,7 +325,11 @@ export const storeService = {
 
   // Settings
   getStoreSettings(): StoreSettings {
-    return readJson<StoreSettings>(`${KEY_PREFIX}:settings`, INITIAL_SETTINGS);
+    const saved = readJson<Partial<StoreSettings> | null>(`${KEY_PREFIX}:settings`, null);
+    return {
+      ...INITIAL_SETTINGS,
+      ...(saved && typeof saved === 'object' ? saved : {}),
+    };
   },
 
   saveStoreSettings(settings: StoreSettings): void {

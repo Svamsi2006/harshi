@@ -276,8 +276,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setCoupons(boot.coupons);
       }
       if (boot.settings) {
-        storeService.saveStoreSettings(boot.settings);
-        setStoreSettings(boot.settings);
+        const mergedSettings: StoreSettings = {
+          ...storeService.getStoreSettings(),
+          ...boot.settings,
+        };
+        storeService.saveStoreSettings(mergedSettings);
+        setStoreSettings(mergedSettings);
       }
     } catch (error) {
       setSupabaseStatus({
