@@ -30,6 +30,15 @@ interface ChatLogItem {
   errorDetail?: string;
 }
 
+function readableError(error: unknown, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
+
 const OPENROUTER_MODEL_PRESETS = [
   'openai/gpt-4o-mini',
   'google/gemini-2.0-flash-001',
@@ -149,9 +158,7 @@ export const AdminSettingsPage: React.FC = () => {
         setTestResult({
           ok: false,
           text:
-            typeof json.error === 'string'
-              ? json.error
-              : json.error?.message || 'OpenRouter connection test failed.',
+            readableError(json.error, 'OpenRouter connection test failed.'),
         });
       }
       await fetchChatLogs();
@@ -223,7 +230,7 @@ export const AdminSettingsPage: React.FC = () => {
                 </p>
                 {supabaseStatus.error && (
                   <p className="mt-1 text-[#7A655C]">
-                    {supabaseStatus.error}
+                    {readableError(supabaseStatus.error, 'Supabase status request failed')}
                   </p>
                 )}
                 {supabaseStatus.diagnostics && (
