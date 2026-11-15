@@ -353,7 +353,7 @@ async function checkSupabaseTables() {
   };
 }
 
-async function startServer() {
+export function createApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
@@ -937,6 +937,12 @@ ${catalogSummary ? `\nLive studio creations:\n${catalogSummary}` : ''}`;
     }
   });
 
+  return app;
+}
+
+async function startServer() {
+  const app = createApp();
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -957,4 +963,6 @@ ${catalogSummary ? `\nLive studio creations:\n${catalogSummary}` : ''}`;
   });
 }
 
-startServer();
+if (process.env.VERCEL !== '1') {
+  startServer();
+}
