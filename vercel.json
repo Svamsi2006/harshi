@@ -9,6 +9,14 @@
   },
   "rewrites": [
     {
+      "source": "/api/supabase/status",
+      "destination": "/api/status"
+    },
+    {
+      "source": "/api/chat/logs",
+      "destination": "/api/chat-logs"
+    },
+    {
       "source": "/admin/:path*",
       "destination": "/index.html"
     },
