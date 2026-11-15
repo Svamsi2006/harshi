@@ -27,11 +27,11 @@ export const WishlistButton: React.FC<WishlistButtonProps> = ({
         aria-pressed={saved}
         className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap ${
           saved
-            ? 'bg-[#C86D51]/10 border-[#C86D51]/40 text-[#B2593E]'
-            : 'bg-white border-[#EAE3D5] text-[#2B2623] hover:border-[#C86D51]'
+            ? 'bg-[#6D1836]/10 border-[#6D1836]/40 text-[#541129]'
+            : 'bg-white border-[#E7C7CC] text-[#3E2F27] hover:border-[#6D1836]'
         } ${className}`}
       >
-        <Heart className={`w-4 h-4 ${saved ? 'fill-[#C86D51] text-[#C86D51]' : ''}`} />
+        <Heart className={`w-4 h-4 ${saved ? 'fill-[#6D1836] text-[#6D1836]' : ''}`} />
         <span>{saved ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
       </button>
     );
@@ -48,11 +48,11 @@ export const WishlistButton: React.FC<WishlistButtonProps> = ({
       }}
       aria-label={saved ? `Remove ${productName} from wishlist` : `Save ${productName} to wishlist`}
       aria-pressed={saved}
-      className={`w-9 h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#EAE3D5] flex items-center justify-center text-[#2B2623] hover:border-[#C86D51] transition-colors shadow-xs ${className}`}
+      className={`w-9 h-9 rounded-full bg-white/95 backdrop-blur-xs border border-[#E7C7CC] flex items-center justify-center text-[#3E2F27] hover:border-[#6D1836] transition-colors shadow-xs ${className}`}
     >
       <Heart
         className={`w-4 h-4 transition-colors ${
-          saved ? 'fill-[#C86D51] text-[#C86D51]' : 'text-[#6E655F]'
+          saved ? 'fill-[#6D1836] text-[#6D1836]' : 'text-[#7A655C]'
         }`}
       />
     </motion.button>

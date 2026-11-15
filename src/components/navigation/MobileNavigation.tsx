@@ -10,19 +10,8 @@ interface MobileNavigationProps {
   onClose: () => void;
 }
 
-const MOBILE_LINKS = [
-  { label: 'Home Studio', to: '/' },
-  { label: 'Shop All Works', to: '/shop' },
-  { label: 'Pencil & Charcoal Sketches', to: '/shop/sketches' },
-  { label: 'Handicrafts & Clay', to: '/shop/handicrafts' },
-  { label: 'Original Paintings', to: '/shop/paintings' },
-  { label: 'Watercolor Prints', to: '/shop/prints' },
-  { label: 'Artist Story', to: '/artist-story' },
-  { label: 'Custom Commission', to: '/commission' },
-];
-
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onClose }) => {
-  const { user, cartCount, openCartDrawer } = useStore();
+  const { user, cartCount, openCartDrawer, categories } = useStore();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -33,6 +22,14 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
+  const primaryLinks = [
+    { label: 'Home Studio', to: '/' },
+    { label: 'Shop All Works', to: '/shop' },
+    { label: 'About Us', to: '/about-us' },
+    { label: 'Custom Orders', to: '/custom-orders' },
+    { label: 'Contact', to: '/contact' },
+  ];
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -42,7 +39,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-[#2B2623]/30 backdrop-blur-xs"
+            className="fixed inset-0 bg-[#3E2F27]/35 backdrop-blur-xs"
             onClick={onClose}
             aria-hidden="true"
           />
@@ -51,16 +48,16 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-            className="fixed top-0 left-0 bottom-0 w-[86vw] max-w-sm bg-[#FAF7F2] border-r border-[#EAE3D5] shadow-warm flex flex-col justify-between overflow-y-auto"
+            className="fixed top-0 left-0 bottom-0 w-[86vw] max-w-sm bg-[#FFF9F5] border-r border-[#E7C7CC] shadow-warm flex flex-col justify-between overflow-y-auto"
             aria-label="Mobile menu"
           >
             <div>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE3D5]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#E7C7CC]/70">
                 <BrandLogo to="/" size="sm" />
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 text-[#6E655F] hover:text-[#2B2623] rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  className="p-2 text-[#7A655C] hover:text-[#3E2F27] rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center"
                   aria-label="Close navigation menu"
                 >
                   <X className="w-5 h-5" />
@@ -68,17 +65,17 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
               </div>
 
               <nav className="p-5 space-y-1">
-                {MOBILE_LINKS.map((link) => (
+                {primaryLinks.map((link) => (
                   <NavLink
                     key={link.to}
                     to={link.to}
                     end={link.to === '/' || link.to === '/shop'}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-[#F3EDE2] text-[#C86D51]'
-                          : 'text-[#2B2623] hover:bg-[#F3EDE2]/60'
+                          ? 'bg-[#E7C7CC]/40 text-[#6D1836] font-semibold'
+                          : 'text-[#3E2F27] hover:bg-[#F8EFEA]'
                       }`
                     }
                   >
@@ -86,17 +83,40 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
                     <ArrowRight className="w-4 h-4 opacity-40" />
                   </NavLink>
                 ))}
+
+                <div className="pt-4 mt-3 border-t border-[#E7C7CC]/60">
+                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7A655C]">
+                    Craft Categories
+                  </p>
+                  {categories.map((cat) => (
+                    <NavLink
+                      key={cat.id}
+                      to={`/shop/category/${cat.slug}`}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-colors ${
+                          isActive
+                            ? 'bg-[#E7C7CC]/40 text-[#6D1836] font-semibold'
+                            : 'text-[#7A655C] hover:text-[#3E2F27] hover:bg-[#F8EFEA]'
+                        }`
+                      }
+                    >
+                      <span className="truncate pr-2">{cat.label}</span>
+                      <ArrowRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                    </NavLink>
+                  ))}
+                </div>
               </nav>
             </div>
 
-            <div className="p-5 border-t border-[#EAE3D5] bg-[#F3EDE2]/60 space-y-3">
+            <div className="p-5 border-t border-[#E7C7CC]/70 bg-[#F8EFEA] space-y-3">
               <div className="flex items-center gap-2.5">
                 <Link
                   to={user ? '/account' : '/login'}
                   onClick={onClose}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#EAE3D5] text-sm font-medium text-[#2B2623] hover:border-[#C86D51] transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm font-medium text-[#3E2F27] hover:border-[#6D1836] transition-colors"
                 >
-                  <User className="w-4 h-4 text-[#C86D51]" />
+                  <User className="w-4 h-4 text-[#6D1836]" />
                   <span>{user ? 'My Account' : 'Sign In'}</span>
                 </Link>
                 <button
@@ -105,22 +125,22 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
                     onClose();
                     openCartDrawer();
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#C86D51] text-white text-sm font-medium hover:bg-[#B2593E] transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#6D1836] text-[#FFF9F5] text-sm font-medium hover:bg-[#541129] transition-colors"
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>Bag ({cartCount})</span>
                 </button>
               </div>
-              <div className="flex items-center justify-center gap-4 text-xs text-[#6E655F] pt-1">
-                <Link to="/contact" onClick={onClose} className="hover:text-[#2B2623]">
+              <div className="flex items-center justify-center gap-4 text-xs text-[#7A655C] pt-1">
+                <Link to="/contact" onClick={onClose} className="hover:text-[#6D1836]">
                   Contact
                 </Link>
                 <span aria-hidden="true">·</span>
-                <Link to="/faq" onClick={onClose} className="hover:text-[#2B2623]">
+                <Link to="/faq" onClick={onClose} className="hover:text-[#6D1836]">
                   FAQ
                 </Link>
                 <span aria-hidden="true">·</span>
-                <Link to="/policies/shipping" onClick={onClose} className="hover:text-[#2B2623]">
+                <Link to="/policies/shipping" onClick={onClose} className="hover:text-[#6D1836]">
                   Shipping
                 </Link>
               </div>

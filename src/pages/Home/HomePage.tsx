@@ -54,18 +54,18 @@ export const HomePage: React.FC = () => {
           <div className="space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
-                <h2 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+                <h2 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
                   Our Collection
                 </h2>
-                <p className="font-handwritten text-2xl text-[#6E655F] mt-1">
-                  Timeless art, crafted with love and care.
+                <p className="font-handwritten text-2xl text-[#7A655C] mt-1">
+                  Crafted with thought, gifted with heart.
                 </p>
               </div>
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#C86D51] hover:text-[#B2593E] transition-colors whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#6D1836] hover:text-[#541129] transition-colors whitespace-nowrap"
               >
-                <span>View all {filteredProducts.length} works</span>
+                <span>View all {filteredProducts.length} creations</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -88,7 +88,7 @@ export const HomePage: React.FC = () => {
             <div className="pt-4 text-center">
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-white border border-[#EAE3D5] hover:border-[#C86D51] text-sm font-medium text-[#2B2623] hover:text-[#C86D51] transition-colors shadow-xs"
+                className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-white border border-[#E7C7CC] hover:border-[#6D1836] text-sm font-medium text-[#3E2F27] hover:text-[#6D1836] transition-colors shadow-xs"
               >
                 <span>Browse Complete Studio Collection</span>
                 <ArrowRight className="w-4 h-4" />

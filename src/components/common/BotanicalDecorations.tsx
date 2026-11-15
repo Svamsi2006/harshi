@@ -72,13 +72,13 @@ export const SketchUnderline: React.FC<{ className?: string }> = ({ className = 
 
 export const OrganicDivider: React.FC<{ className?: string }> = ({ className = '' }) => (
   <div className={`flex items-center justify-center gap-4 my-2 ${className}`} aria-hidden="true">
-    <span className="h-px flex-1 bg-[#EAE3D5]" />
+    <span className="h-px flex-1 bg-[#E7C7CC]" />
     <svg
       width="32"
       height="16"
       viewBox="0 0 32 16"
       fill="none"
-      className="text-[#7A9178] shrink-0"
+      className="text-[#C9A66B] shrink-0"
     >
       <path
         d="M2 8C7 8 11 4 16 8C21 12 25 8 30 8"
@@ -93,7 +93,7 @@ export const OrganicDivider: React.FC<{ className?: string }> = ({ className = '
         strokeLinejoin="round"
       />
     </svg>
-    <span className="h-px flex-1 bg-[#EAE3D5]" />
+    <span className="h-px flex-1 bg-[#E7C7CC]" />
   </div>
 );
 

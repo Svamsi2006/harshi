@@ -8,6 +8,8 @@ import { Footer } from './components/layout/Footer';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { SearchOverlay } from './components/navigation/SearchOverlay';
 import { ToastNotification } from './components/common/ToastNotification';
+import { StudioSplashIntro } from './components/common/StudioSplashIntro';
+import { StudioChatbotWidget } from './components/chat/StudioChatbotWidget';
 
 import { HomePage } from './pages/Home/HomePage';
 import { ShopPage } from './pages/Shop/ShopPage';
@@ -32,6 +34,7 @@ import { AdminLoginPage } from './pages/Admin/AdminLoginPage';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminProductsPage } from './pages/Admin/AdminProductsPage';
 import { AdminProductFormPage } from './pages/Admin/AdminProductFormPage';
+import { AdminCategoriesPage } from './pages/Admin/AdminCategoriesPage';
 import { AdminInventoryPage } from './pages/Admin/AdminInventoryPage';
 import { AdminOrdersPage } from './pages/Admin/AdminOrdersPage';
 import { AdminCustomersPage } from './pages/Admin/AdminCustomersPage';
@@ -60,11 +63,18 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const AppShell: React.FC = () => {
   const { pathname } = useLocation();
   const { storeSettings } = useStore();
+  const [introReplay, setIntroReplay] = React.useState(0);
   const isAdminRoute = pathname.startsWith('/admin');
 
+  useEffect(() => {
+    const onReplay = () => setIntroReplay((n) => n + 1);
+    window.addEventListener('varniks:replay-intro', onReplay);
+    return () => window.removeEventListener('varniks:replay-intro', onReplay);
+  }, []);
+
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#FAF7F2] text-[#2B2623]">
-      {/* Subtle paper-grain texture across the storefront */}
+    <div className="relative min-h-screen flex flex-col bg-[#FFF9F5] text-[#3E2F27]">
+      <StudioSplashIntro replayTrigger={introReplay} />
       <div className="fixed inset-0 paper-grain-overlay z-[1]" aria-hidden="true" />
 
       {!isAdminRoute && <AnnouncementBar message={storeSettings.announcementText} />}
@@ -75,13 +85,12 @@ const AppShell: React.FC = () => {
           {/* Customer Storefront Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/shop" element={<ShopPage />} />
-          <Route path="/shop/sketches" element={<ShopPage routeGroup="sketches" />} />
-          <Route path="/shop/handicrafts" element={<ShopPage routeGroup="handicrafts" />} />
-          <Route path="/shop/paintings" element={<ShopPage routeGroup="paintings" />} />
-          <Route path="/shop/prints" element={<ShopPage routeGroup="prints" />} />
+          <Route path="/shop/category/:slug" element={<ShopPage />} />
           <Route path="/product/:slug" element={<ProductDetailPage />} />
-          <Route path="/artist-story" element={<ArtistStoryPage />} />
-          <Route path="/commission" element={<CommissionPage />} />
+          <Route path="/about-us" element={<ArtistStoryPage />} />
+          <Route path="/artist-story" element={<Navigate to="/about-us" replace />} />
+          <Route path="/custom-orders" element={<CommissionPage />} />
+          <Route path="/commission" element={<Navigate to="/custom-orders" replace />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
@@ -131,6 +140,14 @@ const AppShell: React.FC = () => {
             element={
               <RequireAdmin>
                 <AdminProductFormPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <RequireAdmin>
+                <AdminCategoriesPage />
               </RequireAdmin>
             }
           />
@@ -218,6 +235,7 @@ const AppShell: React.FC = () => {
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && <CartDrawer />}
       {!isAdminRoute && <SearchOverlay />}
+      {!isAdminRoute && <StudioChatbotWidget />}
       <ToastNotification />
     </div>
   );

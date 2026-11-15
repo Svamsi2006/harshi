@@ -34,7 +34,7 @@ export const AccountAddressesPage: React.FC = () => {
           <button
             type="button"
             onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#C86D51]"
+            className="text-sm font-medium text-[#6D1836]"
           >
             Sign in with Demo Collector Account →
           </button>
@@ -48,8 +48,8 @@ export const AccountAddressesPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="font-handwritten text-2xl text-[#C86D51]">Delivery Book</p>
-            <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+            <p className="font-handwritten text-2xl text-[#6D1836]">Delivery Book</p>
+            <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
               Saved Addresses
             </h1>
           </div>
@@ -57,7 +57,7 @@ export const AccountAddressesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors self-start"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors self-start"
             >
               <Plus className="w-4 h-4" />
               <span>Add New Address</span>
@@ -72,8 +72,8 @@ export const AccountAddressesPage: React.FC = () => {
 
           <div className="lg:col-span-9 space-y-6">
             {adding && (
-              <div className="bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm">
-                <h2 className="font-display text-lg font-medium text-[#2B2623] mb-4">
+              <div className="bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm">
+                <h2 className="font-display text-lg font-medium text-[#3E2F27] mb-4">
                   Add Shipping Address
                 </h2>
                 <AddressForm
@@ -87,8 +87,8 @@ export const AccountAddressesPage: React.FC = () => {
             )}
 
             {editingAddr && (
-              <div className="bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm">
-                <h2 className="font-display text-lg font-medium text-[#2B2623] mb-4">
+              <div className="bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm">
+                <h2 className="font-display text-lg font-medium text-[#3E2F27] mb-4">
                   Edit Shipping Address
                 </h2>
                 <AddressForm
@@ -116,37 +116,37 @@ export const AccountAddressesPage: React.FC = () => {
                   <article
                     key={addr.id}
                     className={`bg-white border rounded-2xl p-5 flex flex-col justify-between gap-4 ${
-                      addr.isDefault ? 'border-[#C86D51]' : 'border-[#EAE3D5]'
+                      addr.isDefault ? 'border-[#6D1836]' : 'border-[#E7C7CC]'
                     }`}
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-display text-base font-medium text-[#2B2623]">
+                        <h3 className="font-display text-base font-medium text-[#3E2F27]">
                           {addr.fullName}
                         </h3>
                         {addr.isDefault && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#7A9178]">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#C9A66B]">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Default</span>
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm text-[#6E655F] leading-relaxed">
+                      <p className="text-xs sm:text-sm text-[#7A655C] leading-relaxed">
                         {addr.addressLine}
                         <br />
                         {addr.city}, {addr.state} {addr.postalCode}
                         <br />
                         {addr.country}
                       </p>
-                      <p className="text-xs text-[#6E655F] pt-1">Phone: {addr.phone}</p>
+                      <p className="text-xs text-[#7A655C] pt-1">Phone: {addr.phone}</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#EAE3D5] text-xs">
+                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#E7C7CC] text-xs">
                       {!addr.isDefault && (
                         <button
                           type="button"
                           onClick={() => setDefaultAddress(addr.id)}
-                          className="font-medium text-[#C86D51] hover:text-[#B2593E]"
+                          className="font-medium text-[#6D1836] hover:text-[#541129]"
                         >
                           Set as Default
                         </button>
@@ -157,7 +157,7 @@ export const AccountAddressesPage: React.FC = () => {
                           setAdding(false);
                           setEditingAddr(addr);
                         }}
-                        className="inline-flex items-center gap-1 font-medium text-[#2B2623] hover:text-[#C86D51]"
+                        className="inline-flex items-center gap-1 font-medium text-[#3E2F27] hover:text-[#6D1836]"
                       >
                         <Pencil className="w-3 h-3" />
                         <span>Edit</span>
@@ -165,7 +165,7 @@ export const AccountAddressesPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => deleteAddress(addr.id)}
-                        className="inline-flex items-center gap-1 font-medium text-[#6E655F] hover:text-[#B2593E] ml-auto"
+                        className="inline-flex items-center gap-1 font-medium text-[#7A655C] hover:text-[#541129] ml-auto"
                       >
                         <Trash2 className="w-3 h-3" />
                         <span>Delete</span>

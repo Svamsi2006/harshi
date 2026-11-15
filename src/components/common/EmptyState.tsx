@@ -19,8 +19,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-14 px-6 bg-[#FAF7F2] border border-[#EAE3D5] rounded-2xl">
-      <div className="w-14 h-14 rounded-full bg-[#F3EDE2] text-[#C86D51] flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center text-center py-14 px-6 bg-[#FFF9F5] border border-[#E7C7CC] rounded-2xl">
+      <div className="w-14 h-14 rounded-full bg-[#F8EFEA] text-[#6D1836] flex items-center justify-center mb-4">
         {icon ?? (
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
             <path
@@ -38,12 +38,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           </svg>
         )}
       </div>
-      <h3 className="font-display text-xl font-medium text-[#2B2623]">{title}</h3>
-      <p className="text-sm text-[#6E655F] max-w-md mt-2 leading-relaxed">{description}</p>
+      <h3 className="font-display text-xl font-medium text-[#3E2F27]">{title}</h3>
+      <p className="text-sm text-[#7A655C] max-w-md mt-2 leading-relaxed">{description}</p>
       {actionLabel && actionTo && (
         <Link
           to={actionTo}
-          className="mt-6 inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors whitespace-nowrap"
+          className="mt-6 inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-sm font-medium transition-colors whitespace-nowrap"
         >
           {actionLabel}
         </Link>
@@ -52,7 +52,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <button
           type="button"
           onClick={onAction}
-          className="mt-6 inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors whitespace-nowrap"
+          className="mt-6 inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-sm font-medium transition-colors whitespace-nowrap"
         >
           {actionLabel}
         </button>

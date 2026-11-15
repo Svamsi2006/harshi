@@ -11,10 +11,10 @@ export const ProductBadge: React.FC<ProductBadgeProps> = ({ badge, className = '
 
   const toneClass =
     badge === 'Bestseller' || badge === 'Limited Run'
-      ? 'bg-[#E6B86A]/25 text-[#2B2623] border-[#E6B86A]/50'
+      ? 'bg-[#C9A66B]/25 text-[#3E2F27] border-[#C9A66B]/55'
       : badge === 'Only 1 Left'
-        ? 'bg-[#C86D51]/15 text-[#B2593E] border-[#C86D51]/35'
-        : 'bg-[#7A9178]/15 text-[#495B47] border-[#7A9178]/35';
+        ? 'bg-[#6D1836]/15 text-[#6D1836] border-[#6D1836]/35'
+        : 'bg-[#E7C7CC]/60 text-[#3E2F27] border-[#E7C7CC]';
 
   return (
     <span

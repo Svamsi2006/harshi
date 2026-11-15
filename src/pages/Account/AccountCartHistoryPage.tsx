@@ -13,17 +13,17 @@ const ACTION_META = {
   saved: {
     label: 'Saved from Bag',
     icon: <Bookmark className="w-3.5 h-3.5" />,
-    tone: 'text-[#C86D51] bg-[#C86D51]/10 border-[#C86D51]/25',
+    tone: 'text-[#6D1836] bg-[#6D1836]/10 border-[#6D1836]/25',
   },
   removed: {
     label: 'Previously Removed',
     icon: <Trash2 className="w-3.5 h-3.5" />,
-    tone: 'text-[#6E655F] bg-[#F3EDE2] border-[#EAE3D5]',
+    tone: 'text-[#7A655C] bg-[#F8EFEA] border-[#E7C7CC]',
   },
   checked_out: {
     label: 'Checked Out',
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-    tone: 'text-[#495B47] bg-[#7A9178]/15 border-[#7A9178]/30',
+    tone: 'text-[#8C6B3F] bg-[#C9A66B]/15 border-[#C9A66B]/30',
   },
 };
 
@@ -43,7 +43,7 @@ export const AccountCartHistoryPage: React.FC = () => {
           <button
             type="button"
             onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#C86D51]"
+            className="text-sm font-medium text-[#6D1836]"
           >
             Sign in with Demo Collector Account →
           </button>
@@ -56,11 +56,11 @@ export const AccountCartHistoryPage: React.FC = () => {
     <PageTransition className="py-10 sm:py-14">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <p className="font-handwritten text-2xl text-[#C86D51]">Past Studio Activity</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+          <p className="font-handwritten text-2xl text-[#6D1836]">Past Studio Activity</p>
+          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
             Cart History
           </h1>
-          <p className="text-sm text-[#6E655F] mt-1">
+          <p className="text-sm text-[#7A655C] mt-1">
             Items saved for later, removed, or previously checked out — separate from your current
             active studio bag.
           </p>
@@ -80,7 +80,7 @@ export const AccountCartHistoryPage: React.FC = () => {
                 actionTo="/shop"
               />
             ) : (
-              <div className="bg-white border border-[#EAE3D5] rounded-2xl divide-y divide-[#EAE3D5] shadow-warm/40">
+              <div className="bg-white border border-[#E7C7CC] rounded-2xl divide-y divide-[#E7C7CC] shadow-warm/40">
                 {cartHistory.map((entry) => {
                   const product = getProductById(entry.productId);
                   if (!product) return null;
@@ -94,7 +94,7 @@ export const AccountCartHistoryPage: React.FC = () => {
                       <div className="flex items-center gap-4 min-w-0">
                         <Link
                           to={`/product/${product.slug}`}
-                          className="w-16 h-16 rounded-xl overflow-hidden border border-[#EAE3D5] bg-[#F3EDE2] shrink-0"
+                          className="w-16 h-16 rounded-xl overflow-hidden border border-[#E7C7CC] bg-[#F8EFEA] shrink-0"
                         >
                           <ResilientImage
                             src={product.images[0]}
@@ -111,11 +111,11 @@ export const AccountCartHistoryPage: React.FC = () => {
                           </span>
                           <Link
                             to={`/product/${product.slug}`}
-                            className="block font-display text-base font-medium text-[#2B2623] hover:text-[#C86D51] truncate"
+                            className="block font-display text-base font-medium text-[#3E2F27] hover:text-[#6D1836] truncate"
                           >
                             {product.name}
                           </Link>
-                          <p className="text-xs text-[#6E655F]">
+                          <p className="text-xs text-[#7A655C]">
                             {formatINR(entry.priceAtEvent)} · Qty {entry.quantity} ·{' '}
                             {formatDate(entry.timestamp)}
                           </p>
@@ -126,7 +126,7 @@ export const AccountCartHistoryPage: React.FC = () => {
                         type="button"
                         onClick={() => addToCart(product.id, 1, true)}
                         disabled={product.stock <= 0}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FAF7F2] hover:bg-[#C86D51] text-[#2B2623] hover:text-white border border-[#EAE3D5] hover:border-[#C86D51] text-xs font-medium transition-colors whitespace-nowrap shrink-0"
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FFF9F5] hover:bg-[#6D1836] text-[#3E2F27] hover:text-white border border-[#E7C7CC] hover:border-[#6D1836] text-xs font-medium transition-colors whitespace-nowrap shrink-0"
                       >
                         <ShoppingBag className="w-3.5 h-3.5" />
                         <span>Re-add to Cart</span>

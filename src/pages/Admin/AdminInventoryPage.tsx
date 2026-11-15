@@ -22,24 +22,24 @@ export const AdminInventoryPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
-            <Boxes className="w-4 h-4 text-[#6E655F] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Boxes className="w-4 h-4 text-[#7A655C] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search inventory..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]"
             />
           </div>
-          <span className="text-xs text-[#6E655F] tabular-nums">
+          <span className="text-xs text-[#7A655C] tabular-nums">
             {products.length} active catalog items
           </span>
         </div>
 
-        <div className="bg-white border border-[#EAE3D5] rounded-2xl shadow-warm/40 overflow-hidden">
+        <div className="bg-white border border-[#E7C7CC] rounded-2xl shadow-warm/40 overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#EAE3D5] bg-[#FAF7F2]/50 text-xs text-[#6E655F]">
+              <tr className="border-b border-[#E7C7CC] bg-[#FFF9F5]/50 text-xs text-[#7A655C]">
                 <th className="py-3.5 px-4 font-medium">Artwork</th>
                 <th className="py-3.5 px-4 font-medium">Type</th>
                 <th className="py-3.5 px-4 font-medium">Current Stock</th>
@@ -47,32 +47,32 @@ export const AdminInventoryPage: React.FC = () => {
                 <th className="py-3.5 px-4 font-medium text-right">Stock Adjustment</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#EAE3D5]">
+            <tbody className="divide-y divide-[#E7C7CC]">
               {filtered.map((prod) => (
-                <tr key={prod.id} className="hover:bg-[#FAF7F2]/60">
+                <tr key={prod.id} className="hover:bg-[#FFF9F5]/60">
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
                       <ResilientImage
                         src={prod.images[0]}
                         alt={prod.name}
-                        className="w-12 h-12 rounded-lg object-cover border border-[#EAE3D5] shrink-0"
+                        className="w-12 h-12 rounded-lg object-cover border border-[#E7C7CC] shrink-0"
                       />
                       <div>
-                        <p className="font-medium text-[#2B2623]">{prod.name}</p>
-                        <p className="text-xs text-[#6E655F]">{prod.medium}</p>
+                        <p className="font-medium text-[#3E2F27]">{prod.name}</p>
+                        <p className="text-xs text-[#7A655C]">{prod.medium}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 text-xs text-[#6E655F]">{prod.productType}</td>
-                  <td className="py-3.5 px-4 font-semibold text-[#2B2623] tabular-nums">
+                  <td className="py-3.5 px-4 text-xs text-[#7A655C]">{prod.productType}</td>
+                  <td className="py-3.5 px-4 font-semibold text-[#3E2F27] tabular-nums">
                     {prod.stock}
                   </td>
                   <td className="py-3.5 px-4">
                     <span
                       className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         prod.stock <= 1
-                          ? 'bg-[#B94F45]/15 text-[#B94F45]'
-                          : 'bg-[#7A9178]/15 text-[#7A9178]'
+                          ? 'bg-[#6D1836]/15 text-[#6D1836]'
+                          : 'bg-[#C9A66B]/15 text-[#C9A66B]'
                       }`}
                     >
                       {prod.stock <= 1 ? 'Low Stock' : 'In Stock'}
@@ -83,7 +83,7 @@ export const AdminInventoryPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleAdjustStock(prod.id, -1)}
-                        className="w-8 h-8 rounded-lg bg-[#FAF7F2] border border-[#EAE3D5] flex items-center justify-center text-[#2B2623] hover:border-[#C86D51]"
+                        className="w-8 h-8 rounded-lg bg-[#FFF9F5] border border-[#E7C7CC] flex items-center justify-center text-[#3E2F27] hover:border-[#6D1836]"
                         title="Decrease stock"
                         aria-label={`Decrease stock for ${prod.name}`}
                       >
@@ -95,7 +95,7 @@ export const AdminInventoryPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleAdjustStock(prod.id, 1)}
-                        className="w-8 h-8 rounded-lg bg-[#FAF7F2] border border-[#EAE3D5] flex items-center justify-center text-[#2B2623] hover:border-[#C86D51]"
+                        className="w-8 h-8 rounded-lg bg-[#FFF9F5] border border-[#E7C7CC] flex items-center justify-center text-[#3E2F27] hover:border-[#6D1836]"
                         title="Increase stock"
                         aria-label={`Increase stock for ${prod.name}`}
                       >

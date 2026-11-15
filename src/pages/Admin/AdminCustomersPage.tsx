@@ -20,14 +20,14 @@ export const AdminCustomersPage: React.FC = () => {
     <AdminLayout title="Registered Customers">
       <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#C86D51]" />
-          <span className="text-xs font-medium text-[#6E655F]">1 active studio patron profile</span>
+          <Users className="w-4 h-4 text-[#6D1836]" />
+          <span className="text-xs font-medium text-[#7A655C]">1 active studio patron profile</span>
         </div>
 
-        <div className="bg-white border border-[#EAE3D5] rounded-2xl shadow-warm/40 overflow-hidden">
+        <div className="bg-white border border-[#E7C7CC] rounded-2xl shadow-warm/40 overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#EAE3D5] bg-[#FAF7F2]/50 text-xs text-[#6E655F]">
+              <tr className="border-b border-[#E7C7CC] bg-[#FFF9F5]/50 text-xs text-[#7A655C]">
                 <th className="py-3.5 px-4 font-medium">Customer Name</th>
                 <th className="py-3.5 px-4 font-medium">Email</th>
                 <th className="py-3.5 px-4 font-medium">Phone</th>
@@ -36,16 +36,16 @@ export const AdminCustomersPage: React.FC = () => {
                 <th className="py-3.5 px-4 font-medium text-right">Total Spend</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#EAE3D5]">
-              <tr className="hover:bg-[#FAF7F2]/60">
-                <td className="py-3.5 px-4 font-medium text-[#2B2623]">
+            <tbody className="divide-y divide-[#E7C7CC]">
+              <tr className="hover:bg-[#FFF9F5]/60">
+                <td className="py-3.5 px-4 font-medium text-[#3E2F27]">
                   {DEMO_CUSTOMER.fullName}
                 </td>
-                <td className="py-3.5 px-4 text-xs text-[#6E655F]">{DEMO_CUSTOMER.email}</td>
-                <td className="py-3.5 px-4 text-xs text-[#6E655F]">{DEMO_CUSTOMER.phone}</td>
-                <td className="py-3.5 px-4 text-xs text-[#6E655F]">{DEMO_CUSTOMER.joinedAt}</td>
+                <td className="py-3.5 px-4 text-xs text-[#7A655C]">{DEMO_CUSTOMER.email}</td>
+                <td className="py-3.5 px-4 text-xs text-[#7A655C]">{DEMO_CUSTOMER.phone}</td>
+                <td className="py-3.5 px-4 text-xs text-[#7A655C]">{DEMO_CUSTOMER.joinedAt}</td>
                 <td className="py-3.5 px-4 tabular-nums font-semibold">{customerOrdersCount}</td>
-                <td className="py-3.5 px-4 text-right font-semibold text-[#2B2623] tabular-nums">
+                <td className="py-3.5 px-4 text-right font-semibold text-[#3E2F27] tabular-nums">
                   {formatINR(customerSpend)}
                 </td>
               </tr>

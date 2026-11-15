@@ -35,7 +35,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
   return (
     <div className="space-y-4">
       {/* Main Image Frame */}
-      <div className="relative aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white border border-[#EAE3D5] shadow-warm">
+      <div className="relative aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white border border-[#E7C7CC] shadow-warm">
         <AnimatePresence mode="wait">
           <motion.div
             key={images[activeIndex]}
@@ -62,7 +62,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
           <button
             type="button"
             onClick={() => setZoomed((z) => !z)}
-            className="p-2.5 rounded-xl bg-white/90 backdrop-blur-xs border border-[#EAE3D5] text-[#2B2623] hover:border-[#C86D51] transition-colors"
+            className="p-2.5 rounded-xl bg-white/90 backdrop-blur-xs border border-[#E7C7CC] text-[#3E2F27] hover:border-[#6D1836] transition-colors"
             aria-label={zoomed ? 'Zoom out image' : 'Zoom in image'}
           >
             {zoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
@@ -70,7 +70,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
           <button
             type="button"
             onClick={() => setFullscreen(true)}
-            className="p-2.5 rounded-xl bg-white/90 backdrop-blur-xs border border-[#EAE3D5] text-[#2B2623] hover:border-[#C86D51] transition-colors"
+            className="p-2.5 rounded-xl bg-white/90 backdrop-blur-xs border border-[#E7C7CC] text-[#3E2F27] hover:border-[#6D1836] transition-colors"
             aria-label="Open fullscreen viewer"
           >
             <Maximize2 className="w-4 h-4" />
@@ -82,7 +82,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
             <button
               type="button"
               onClick={prev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border border-[#EAE3D5] flex items-center justify-center text-[#2B2623] hover:border-[#C86D51] transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border border-[#E7C7CC] flex items-center justify-center text-[#3E2F27] hover:border-[#6D1836] transition-colors"
               aria-label="Previous image"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -90,7 +90,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
             <button
               type="button"
               onClick={next}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border border-[#EAE3D5] flex items-center justify-center text-[#2B2623] hover:border-[#C86D51] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 border border-[#E7C7CC] flex items-center justify-center text-[#3E2F27] hover:border-[#6D1836] transition-colors"
               aria-label="Next image"
             >
               <ChevronRight className="w-4 h-4" />
@@ -114,8 +114,8 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
                 }}
                 className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
                   active
-                    ? 'border-[#C86D51] shadow-xs'
-                    : 'border-[#EAE3D5] opacity-75 hover:opacity-100'
+                    ? 'border-[#6D1836] shadow-xs'
+                    : 'border-[#E7C7CC] opacity-75 hover:opacity-100'
                 }`}
                 aria-label={`View image ${idx + 1} of ${productName}`}
               >
@@ -137,7 +137,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] bg-[#2B2623]/92 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+            className="fixed inset-0 z-[80] bg-[#3E2F27]/92 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
             role="dialog"
             aria-modal="true"
             aria-label={`Fullscreen view of ${productName}`}
@@ -178,7 +178,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
                 alt={productName}
                 className="max-h-[78vh] w-auto max-w-full rounded-xl object-contain shadow-2xl"
               />
-              <p className="mt-3 text-sm text-[#FAF7F2]/80">
+              <p className="mt-3 text-sm text-[#FFF9F5]/80">
                 {productName} · {activeIndex + 1} / {images.length}
               </p>
             </div>

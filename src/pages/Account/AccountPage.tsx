@@ -40,7 +40,7 @@ export const AccountPage: React.FC = () => {
           <button
             type="button"
             onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#C86D51] hover:text-[#B2593E]"
+            className="text-sm font-medium text-[#6D1836] hover:text-[#541129]"
           >
             Or explore immediately with the Demo Collector Account →
           </button>
@@ -62,19 +62,19 @@ export const AccountPage: React.FC = () => {
     <PageTransition className="py-10 sm:py-14">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {isAdmin && (
-          <div className="mb-6 p-4 rounded-2xl bg-[#F3EDE2] border border-[#C86D51]/40 flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-6 p-4 rounded-2xl bg-[#F8EFEA] border border-[#6D1836]/40 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <LayoutDashboard className="w-5 h-5 text-[#C86D51]" />
+              <LayoutDashboard className="w-5 h-5 text-[#6D1836]" />
               <div>
-                <p className="text-sm font-semibold text-[#2B2623]">Studio Owner Session Active</p>
-                <p className="text-xs text-[#6E655F]">
+                <p className="text-sm font-semibold text-[#3E2F27]">Studio Owner Session Active</p>
+                <p className="text-xs text-[#7A655C]">
                   Manage products, inventory, orders, and Supabase settings from your Admin Portal.
                 </p>
               </div>
             </div>
             <Link
               to="/admin"
-              className="px-4 py-2 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-xs font-medium transition-colors"
+              className="px-4 py-2 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-xs font-medium transition-colors"
             >
               Open Admin Dashboard →
             </Link>
@@ -82,8 +82,8 @@ export const AccountPage: React.FC = () => {
         )}
 
         <div className="mb-8">
-          <p className="font-handwritten text-2xl text-[#C86D51]">Customer Portal</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+          <p className="font-handwritten text-2xl text-[#6D1836]">Customer Portal</p>
+          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
             {isSettingsTab ? 'Account Settings' : 'My Profile & Saved Art'}
           </h1>
         </div>
@@ -95,17 +95,17 @@ export const AccountPage: React.FC = () => {
 
           <div className="lg:col-span-9 space-y-8">
             {isSettingsTab ? (
-              <section className="bg-white border border-[#EAE3D5] rounded-2xl p-6 sm:p-7 shadow-warm/40 space-y-5">
-                <h2 className="font-display text-xl font-medium text-[#2B2623]">
+              <section className="bg-white border border-[#E7C7CC] rounded-2xl p-6 sm:p-7 shadow-warm/40 space-y-5">
+                <h2 className="font-display text-xl font-medium text-[#3E2F27]">
                   Studio Communication Preferences
                 </h2>
                 <div className="space-y-4">
-                  <label className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] cursor-pointer">
+                  <label className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] cursor-pointer">
                     <div>
-                      <p className="text-sm font-medium text-[#2B2623]">
+                      <p className="text-sm font-medium text-[#3E2F27]">
                         New Sketch &amp; Kiln Release Letters
                       </p>
-                      <p className="text-xs text-[#6E655F] mt-0.5">
+                      <p className="text-xs text-[#7A655C] mt-0.5">
                         Receive occasional notes when new 1-of-1 drawings or clay batches open.
                       </p>
                     </div>
@@ -113,16 +113,16 @@ export const AccountPage: React.FC = () => {
                       type="checkbox"
                       checked={studioNewsletter}
                       onChange={(e) => setStudioNewsletter(e.target.checked)}
-                      className="mt-1 rounded border-[#EAE3D5] text-[#C86D51]"
+                      className="mt-1 rounded border-[#E7C7CC] text-[#6D1836]"
                     />
                   </label>
 
-                  <label className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] cursor-pointer">
+                  <label className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] cursor-pointer">
                     <div>
-                      <p className="text-sm font-medium text-[#2B2623]">
+                      <p className="text-sm font-medium text-[#3E2F27]">
                         Order Dispatch &amp; Packing Notifications
                       </p>
-                      <p className="text-xs text-[#6E655F] mt-0.5">
+                      <p className="text-xs text-[#7A655C] mt-0.5">
                         SMS &amp; email updates when your parcel moves from studio to courier.
                       </p>
                     </div>
@@ -130,7 +130,7 @@ export const AccountPage: React.FC = () => {
                       type="checkbox"
                       checked={orderSmsUpdates}
                       onChange={(e) => setOrderSmsUpdates(e.target.checked)}
-                      className="mt-1 rounded border-[#EAE3D5] text-[#C86D51]"
+                      className="mt-1 rounded border-[#E7C7CC] text-[#6D1836]"
                     />
                   </label>
                 </div>
@@ -138,16 +138,16 @@ export const AccountPage: React.FC = () => {
             ) : (
               <>
                 {/* Profile Info Card */}
-                <section className="bg-white border border-[#EAE3D5] rounded-2xl p-6 sm:p-7 shadow-warm/40">
-                  <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#EAE3D5]">
-                    <h2 className="font-display text-xl font-medium text-[#2B2623]">
+                <section className="bg-white border border-[#E7C7CC] rounded-2xl p-6 sm:p-7 shadow-warm/40">
+                  <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#E7C7CC]">
+                    <h2 className="font-display text-xl font-medium text-[#3E2F27]">
                       Collector Details
                     </h2>
                     {!editing && (
                       <button
                         type="button"
                         onClick={() => setEditing(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EAE3D5] text-xs font-medium text-[#2B2623] hover:border-[#C86D51] transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E7C7CC] text-xs font-medium text-[#3E2F27] hover:border-[#6D1836] transition-colors"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                         <span>Edit Profile</span>
@@ -159,43 +159,43 @@ export const AccountPage: React.FC = () => {
                     <form onSubmit={handleSaveProfile} className="pt-5 space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+                          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
                             Full Name
                           </label>
                           <input
                             type="text"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623]"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27]"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+                          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
                             Email
                           </label>
                           <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623]"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27]"
                           />
                         </div>
                       </div>
                       <div className="sm:w-1/2">
-                        <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+                        <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
                           Phone
                         </label>
                         <input
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623]"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27]"
                         />
                       </div>
                       <div className="flex items-center gap-3 pt-2">
                         <button
                           type="submit"
-                          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium"
+                          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium"
                         >
                           <Check className="w-4 h-4" />
                           <span>Save Changes</span>
@@ -203,7 +203,7 @@ export const AccountPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setEditing(false)}
-                          className="px-5 py-2.5 rounded-xl border border-[#EAE3D5] text-sm font-medium text-[#6E655F]"
+                          className="px-5 py-2.5 rounded-xl border border-[#E7C7CC] text-sm font-medium text-[#7A655C]"
                         >
                           Cancel
                         </button>
@@ -212,16 +212,16 @@ export const AccountPage: React.FC = () => {
                   ) : (
                     <dl className="pt-5 grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
                       <div>
-                        <dt className="text-xs text-[#6E655F]">Full Name</dt>
-                        <dd className="font-medium text-[#2B2623] mt-1">{user.fullName}</dd>
+                        <dt className="text-xs text-[#7A655C]">Full Name</dt>
+                        <dd className="font-medium text-[#3E2F27] mt-1">{user.fullName}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-[#6E655F]">Email Address</dt>
-                        <dd className="font-medium text-[#2B2623] mt-1">{user.email}</dd>
+                        <dt className="text-xs text-[#7A655C]">Email Address</dt>
+                        <dd className="font-medium text-[#3E2F27] mt-1">{user.email}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-[#6E655F]">Phone Number</dt>
-                        <dd className="font-medium text-[#2B2623] mt-1">{user.phone || 'Not set'}</dd>
+                        <dt className="text-xs text-[#7A655C]">Phone Number</dt>
+                        <dd className="font-medium text-[#3E2F27] mt-1">{user.phone || 'Not set'}</dd>
                       </div>
                     </dl>
                   )}
@@ -230,13 +230,13 @@ export const AccountPage: React.FC = () => {
                 {/* Saved Wishlist */}
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-display text-2xl font-medium text-[#2B2623] inline-flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-[#C86D51]" />
+                    <h2 className="font-display text-2xl font-medium text-[#3E2F27] inline-flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-[#6D1836]" />
                       <span>Saved Wishlist ({savedProducts.length})</span>
                     </h2>
                     <Link
                       to="/shop"
-                      className="text-xs font-medium text-[#C86D51] hover:text-[#B2593E]"
+                      className="text-xs font-medium text-[#6D1836] hover:text-[#541129]"
                     >
                       Explore More →
                     </Link>

@@ -6,9 +6,9 @@ import { PageTransition } from '../../components/common/PageTransition';
 
 const CATEGORIES: Array<'All' | FaqItem['category']> = [
   'All',
-  'Artworks',
+  'Creations',
   'Shipping',
-  'Commissions',
+  'Custom Orders',
   'Care',
 ];
 
@@ -23,12 +23,12 @@ export const FaqPage: React.FC = () => {
     <PageTransition className="py-12 sm:py-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center space-y-3">
-          <p className="font-handwritten text-2xl text-[#C86D51]">Studio Answers</p>
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+          <p className="font-handwritten text-2xl text-[#6D1836]">Studio Answers</p>
+          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
             Frequently Asked Questions
           </h1>
-          <p className="text-sm sm:text-base text-[#6E655F]">
-            Everything about archival materials, fragile clay packing, and custom commissions.
+          <p className="text-sm sm:text-base text-[#7A655C]">
+            Everything about resin care, LED frames, gift wrapping, and custom order waiting lists.
           </p>
         </div>
 
@@ -43,8 +43,8 @@ export const FaqPage: React.FC = () => {
               }}
               className={`px-4 py-2 rounded-xl text-xs font-medium border transition-colors ${
                 selectedCat === cat
-                  ? 'bg-[#C86D51] text-white border-[#C86D51]'
-                  : 'bg-[#F3EDE2] text-[#2B2623] border-[#EAE3D5] hover:border-[#C86D51]/50'
+                  ? 'bg-[#6D1836] text-[#FFF9F5] border-[#6D1836]'
+                  : 'bg-[#F8EFEA] text-[#3E2F27] border-[#E7C7CC] hover:border-[#6D1836]/50'
               }`}
             >
               {cat}
@@ -52,7 +52,7 @@ export const FaqPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="bg-white border border-[#EAE3D5] rounded-2xl divide-y divide-[#EAE3D5] shadow-warm/40">
+        <div className="bg-white border border-[#E7C7CC] rounded-2xl divide-y divide-[#E7C7CC]/60 shadow-warm/40">
           {visible.map((item, idx) => {
             const isOpen = openIndex === idx;
             return (
@@ -63,17 +63,17 @@ export const FaqPage: React.FC = () => {
                   onClick={() => setOpenIndex(isOpen ? null : idx)}
                   className="w-full flex items-center justify-between gap-4 text-left"
                 >
-                  <span className="font-display text-base sm:text-lg font-medium text-[#2B2623]">
+                  <span className="font-display text-base sm:text-lg font-medium text-[#3E2F27]">
                     {item.question}
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-[#C86D51] shrink-0 transition-transform duration-200 ${
+                    className={`w-4 h-4 text-[#6D1836] shrink-0 transition-transform duration-200 ${
                       isOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
                 {isOpen && (
-                  <p className="mt-3 text-sm text-[#6E655F] leading-relaxed">{item.answer}</p>
+                  <p className="mt-3 text-sm text-[#7A655C] leading-relaxed">{item.answer}</p>
                 )}
               </div>
             );
@@ -81,10 +81,10 @@ export const FaqPage: React.FC = () => {
         </div>
 
         <div className="text-center pt-2">
-          <p className="text-sm text-[#6E655F]">
+          <p className="text-sm text-[#7A655C]">
             Still wondering about something?{' '}
-            <Link to="/contact" className="font-medium text-[#C86D51] hover:text-[#B2593E]">
-              Write directly to Varnika →
+            <Link to="/contact" className="font-medium text-[#6D1836] hover:text-[#541129]">
+              Write directly to our studio →
             </Link>
           </p>
         </div>

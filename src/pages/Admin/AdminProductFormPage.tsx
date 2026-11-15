@@ -1,220 +1,293 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import type { Product, ProductWorkType } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { STUDIO_MEDIA } from '../../data/studioImages';
-
-const CATEGORY_OPTIONS = [
-  { key: 'sketches', label: 'Pencil & Charcoal Sketches', group: 'sketches' },
-  { key: 'clay-terracotta', label: 'Clay & Terracotta', group: 'handicrafts' },
-  { key: 'wood-woven', label: 'Wood & Woven Crafts', group: 'handicrafts' },
-  { key: 'paintings', label: 'Original Paintings', group: 'paintings' },
-  { key: 'prints', label: 'Watercolor Prints', group: 'prints' },
-] as const;
+import { ResilientImage } from '../../components/common/ResilientImage';
+import { uploadStudioPhoto } from '../../utils/imageUpload';
 
 const SAMPLE_IMAGE_OPTIONS = [
-  { label: 'Village Sketch', url: STUDIO_MEDIA.sketchVillageLife },
-  { label: 'Terracotta Ganesha', url: STUDIO_MEDIA.terracottaGanesha },
-  { label: 'Serene Lake Print', url: STUDIO_MEDIA.watercolorSereneLake },
-  { label: 'Jute Basket', url: STUDIO_MEDIA.wovenJuteBasket },
-  { label: 'Banyan Tree Sketch', url: STUDIO_MEDIA.sketchOldBanyan },
-  { label: 'Monsoon Painting', url: STUDIO_MEDIA.paintingMonsoonCourtyard },
-  { label: 'Marigold Print', url: STUDIO_MEDIA.printBotanicalMarigold },
-  { label: 'Wood Tray', url: STUDIO_MEDIA.woodCarvedTrivet },
+  { label: 'Resin Coasters', url: STUDIO_MEDIA.resinFloralKeepsake },
+  { label: 'Pipe Cleaner Bouquet', url: STUDIO_MEDIA.clayPipecleanerBouquet },
+  { label: 'LED Memory Frame', url: STUDIO_MEDIA.ledMemoryFrame },
+  { label: 'Paper & Photo Box', url: STUDIO_MEDIA.paperPhotoKeepsake },
+  { label: 'Embroidery Hoop', url: STUDIO_MEDIA.textileEmbroideryHoop },
+  { label: 'Personalized Charm', url: STUDIO_MEDIA.personalizedAccessoriesCharm },
+  { label: 'Portrait Keepsake', url: STUDIO_MEDIA.artPortraitKeepsake },
+  { label: 'Studio Desk', url: STUDIO_MEDIA.artistStudioDesk },
 ];
 
 export const AdminProductFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
-  const { products, addProduct, updateProduct } = useStore();
+  const { products, categories, addProduct, updateProduct } = useStore();
+  const loadedIdRef = useRef<string | null>(null);
 
   const [name, setName] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
   const [story, setStory] = useState('');
   const [artistNote, setArtistNote] = useState('');
-  const [category, setCategory] = useState<Exclude<Product['category'], 'all'>>('sketches');
-  const [price, setPrice] = useState(1499);
-  const [originalPrice, setOriginalPrice] = useState<number | undefined>(undefined);
-  const [stock, setStock] = useState(1);
-  const [productType, setProductType] = useState<ProductWorkType>('Original 1-of-1');
-  const [medium, setMedium] = useState('Graphite on Paper');
-  const [dimensions, setDimensions] = useState('8 × 10 inches');
-  const [material, setMaterial] = useState('Cotton Rag Paper');
-  const [badge, setBadge] = useState<Product['badge']>('Only 1 Left');
-  const [imageUrl, setImageUrl] = useState(STUDIO_MEDIA.sketchVillageLife);
+  const [category, setCategory] = useState<string>(categories[0]?.slug ?? 'resin-creations');
+  const [price, setPrice] = useState('1499');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [stock, setStock] = useState('4');
+  const [productType, setProductType] = useState<ProductWorkType>('Handmade Keepsake');
+  const [medium, setMedium] = useState('Pressed Botanicals in Crystal Resin');
+  const [dimensions, setDimensions] = useState('6 × 8 inches');
+  const [material, setMaterial] = useState('Non-yellowing UV Resin & Gold Leaf');
+  const [badge, setBadge] = useState<Product['badge']>('Handmade');
+  const [imageUrl, setImageUrl] = useState(STUDIO_MEDIA.resinFloralKeepsake);
+  const [secondaryImageUrl, setSecondaryImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isEditing && id) {
-      const found = products.find((p) => p.id === id);
-      if (found) {
-        setName(found.name);
-        setSubtitle(found.subtitle);
-        setDescription(found.description);
-        setStory(found.story);
-        setArtistNote(found.artistNote);
-        setCategory(found.category);
-        setPrice(found.price);
-        setOriginalPrice(found.originalPrice);
-        setStock(found.stock);
-        setProductType(found.productType);
-        setMedium(found.medium);
-        setDimensions(found.dimensions);
-        setMaterial(found.specifications.material);
-        setBadge(found.badge);
-        setImageUrl(found.images[0] || STUDIO_MEDIA.sketchVillageLife);
-      }
+    if (!isEditing || !id) {
+      loadedIdRef.current = null;
+      return;
+    }
+    if (loadedIdRef.current === id) return;
+
+    const found = products.find((p) => p.id === id);
+    if (found) {
+      loadedIdRef.current = id;
+      setName(found.name);
+      setSubtitle(found.subtitle);
+      setDescription(found.description);
+      setStory(found.story);
+      setArtistNote(found.artistNote);
+      setCategory(found.category);
+      setPrice(String(found.price));
+      setOriginalPrice(found.originalPrice ? String(found.originalPrice) : '');
+      setStock(String(found.stock));
+      setProductType(found.productType);
+      setMedium(found.medium);
+      setDimensions(found.dimensions);
+      setMaterial(found.specifications?.material ?? '');
+      setBadge(found.badge);
+      setImageUrl(found.images[0] || STUDIO_MEDIA.resinFloralKeepsake);
+      setSecondaryImageUrl(
+        found.images[1] && found.images[1] !== found.images[0] ? found.images[1] : ''
+      );
     }
   }, [isEditing, id, products]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setError('');
+    try {
+      const { url } = await uploadStudioPhoto(file, 'products');
+      setImageUrl(url);
+    } catch {
+      setError('Could not process the selected image file. Please try another photo or URL.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !description.trim() || price <= 0) {
-      setError('Please provide a valid product name, description, and price.');
+    if (saving) return;
+
+    const parsedPrice = Number(price);
+    const parsedOriginal = originalPrice.trim() ? Number(originalPrice) : undefined;
+    const parsedStock = Math.max(0, Math.floor(Number(stock) || 0));
+
+    if (!name.trim()) {
+      setError('Please enter a product name.');
       return;
     }
-    setError('');
+    if (!description.trim()) {
+      setError('Please enter a product description.');
+      return;
+    }
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setError('Please enter a valid price greater than ₹0.');
+      return;
+    }
+    if (!imageUrl.trim()) {
+      setError('Please provide a valid primary photo URL or upload an image.');
+      return;
+    }
 
-    const catObj = CATEGORY_OPTIONS.find((c) => c.key === category);
-    const categoryLabel = catObj ? catObj.label : 'Sketches';
-    const routeGroup = catObj ? catObj.group : 'sketches';
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    setError('');
+    setSaving(true);
+
+    const catObj = categories.find((c) => c.slug === category) ?? categories[0];
+    const categoryLabel = catObj ? catObj.label : category;
+    const routeGroup = catObj ? catObj.slug : category;
+    const existingProduct = isEditing && id ? products.find((p) => p.id === id) : undefined;
+    const generatedSlug =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || `creation-${Date.now()}`;
+
+    const cleanPrimaryImg = imageUrl.trim();
+    const cleanSecondaryImg = secondaryImageUrl.trim() || cleanPrimaryImg;
 
     const productPayload = {
-      slug,
+      slug: generatedSlug,
       name: name.trim(),
       subtitle: subtitle.trim() || name.trim(),
       description: description.trim(),
       story: story.trim() || description.trim(),
-      artistNote: artistNote.trim() || 'Signed on reverse by the artist.',
+      artistNote: artistNote.trim() || 'Crafted by hand in varniks_atelier.',
       category,
       categoryLabel,
       routeGroup,
-      price: Number(price),
-      originalPrice: originalPrice ? Number(originalPrice) : undefined,
-      images: [imageUrl, imageUrl],
-      medium: medium.trim(),
-      dimensions: dimensions.trim(),
-      stock: Number(stock),
+      price: parsedPrice,
+      originalPrice:
+        parsedOriginal && Number.isFinite(parsedOriginal) && parsedOriginal > 0
+          ? parsedOriginal
+          : undefined,
+      images: [cleanPrimaryImg, cleanSecondaryImg],
+      medium: medium.trim() || 'Handcrafted Studio Piece',
+      dimensions: dimensions.trim() || 'Standard Studio Size',
+      stock: parsedStock,
       productType,
-      availabilityLabel: (stock > 0 ? 'In Stock' : 'Last Piece') as any,
+      availabilityLabel: (parsedStock === 0
+        ? 'Sold Out'
+        : parsedStock === 1
+          ? 'Last Piece'
+          : 'In Stock') as Product['availabilityLabel'],
       badge,
-      isBestseller: true,
-      isPublished: true,
+      isBestseller: existingProduct?.isBestseller ?? true,
+      isPublished: existingProduct?.isPublished ?? true,
       specifications: {
-        medium: medium.trim(),
-        dimensions: dimensions.trim(),
-        material: material.trim(),
-        availability: 'In Studio',
-        care: 'Frame behind UV glass; keep dry',
-        shipping: 'Ships in 3–5 business days',
+        medium: medium.trim() || 'Handcrafted Studio Piece',
+        dimensions: dimensions.trim() || 'Standard Studio Size',
+        material: material.trim() || 'Archival Studio Materials',
+        availability: parsedStock > 0 ? 'In Studio' : 'Made to Order',
+        care:
+          existingProduct?.specifications?.care ??
+          'Keep away from harsh heat & wipe softly with microfiber',
+        shipping: existingProduct?.specifications?.shipping ?? 'Ships in 2–5 business days',
       },
     };
 
-    if (isEditing && id) {
-      updateProduct({
-        ...productPayload,
-        id,
-        createdAt: products.find((p) => p.id === id)?.createdAt ?? new Date().toISOString().split('T')[0],
-      });
-    } else {
-      addProduct(productPayload);
+    try {
+      if (isEditing && id) {
+        await updateProduct({
+          ...productPayload,
+          id,
+          createdAt: existingProduct?.createdAt ?? new Date().toISOString().split('T')[0],
+        });
+      } else {
+        await addProduct(productPayload);
+      }
+      navigate('/admin/products');
+    } finally {
+      setSaving(false);
     }
-    navigate('/admin/products');
   };
 
   const inputClass =
-    'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]';
+    'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]';
+
+  const hasCurrentCategoryInList = categories.some((c) => c.slug === category);
 
   return (
-    <AdminLayout title={isEditing ? 'Edit / Replace Product' : 'Add New Artwork'}>
+    <AdminLayout title={isEditing ? 'Edit / Replace Product' : 'Add New Creation'}>
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate('/admin/products')}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6E655F] hover:text-[#C86D51]"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#7A655C] hover:text-[#6D1836]"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Products</span>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-[#EAE3D5] rounded-3xl p-7 sm:p-9 shadow-warm space-y-6">
+        <form
+          noValidate
+          onSubmit={handleSubmit}
+          className="bg-white border border-[#E7C7CC] rounded-3xl p-7 sm:p-9 shadow-warm space-y-6"
+        >
           {error && (
-            <p className="text-xs text-[#B94F45] bg-[#B94F45]/10 border border-[#B94F45]/25 rounded-xl px-4 py-3">
+            <p className="text-xs font-medium text-[#6D1836] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-4 py-3">
               {error}
             </p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Product Name *</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                Product Name *
+              </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={inputClass}
-                placeholder="Village Courtyard Study"
+                placeholder="Pressed Rose Resin Keepsake Tray"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Subtitle</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Subtitle</label>
               <input
                 type="text"
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 className={inputClass}
-                placeholder="Quiet morning study"
+                placeholder="Crystal resin & gold leaf accent"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Category</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Category</label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
+                onChange={(e) => setCategory(e.target.value)}
                 className={inputClass}
               >
-                {CATEGORY_OPTIONS.map((c) => (
-                  <option key={c.key} value={c.key}>
+                {!hasCurrentCategoryInList && (
+                  <option value={category}>{category}</option>
+                )}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.slug}>
                     {c.label}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Product Type</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                Product Type
+              </label>
               <select
                 value={productType}
                 onChange={(e) => setProductType(e.target.value as ProductWorkType)}
                 className={inputClass}
               >
-                <option value="Original 1-of-1">Original 1-of-1</option>
-                <option value="Limited Edition Print">Limited Edition Print</option>
-                <option value="Handmade Craft">Handmade Craft</option>
+                <option value="Handmade Keepsake">Handmade Keepsake</option>
+                <option value="Custom Made">Custom Made</option>
+                <option value="Original Artwork">Original Artwork</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Badge</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Badge</label>
               <select
                 value={badge ?? ''}
-                onChange={(e) => setBadge((e.target.value as any) || undefined)}
+                onChange={(e) => setBadge((e.target.value as Product['badge']) || undefined)}
                 className={inputClass}
               >
                 <option value="">None</option>
-                <option value="Only 1 Left">Only 1 Left</option>
-                <option value="Bestseller">Bestseller</option>
                 <option value="Handmade">Handmade</option>
+                <option value="Bestseller">Bestseller</option>
+                <option value="Customizable">Customizable</option>
+                <option value="Only 1 Left">Only 1 Left</option>
                 <option value="Limited Run">Limited Run</option>
               </select>
             </div>
@@ -222,30 +295,38 @@ export const AdminProductFormPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Price (₹ INR) *</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                Price (₹ INR) *
+              </label>
               <input
                 type="number"
                 value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
+                onChange={(e) => setPrice(e.target.value)}
                 className={inputClass}
+                min={1}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Compare Price (₹)</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                Compare Price (₹)
+              </label>
               <input
                 type="number"
-                value={originalPrice ?? ''}
-                onChange={(e) => setOriginalPrice(e.target.value ? Number(e.target.value) : undefined)}
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
                 className={inputClass}
                 placeholder="Optional strike price"
+                min={0}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Stock Quantity *</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                Stock Quantity *
+              </label>
               <input
                 type="number"
                 value={stock}
-                onChange={(e) => setStock(Number(e.target.value))}
+                onChange={(e) => setStock(e.target.value)}
                 className={inputClass}
                 min={0}
               />
@@ -254,107 +335,178 @@ export const AdminProductFormPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Medium</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Medium</label>
               <input
                 type="text"
                 value={medium}
                 onChange={(e) => setMedium(e.target.value)}
                 className={inputClass}
-                placeholder="Graphite on Paper"
+                placeholder="Crystal Resin & Pressed Florals"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Dimensions</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Dimensions</label>
               <input
                 type="text"
                 value={dimensions}
                 onChange={(e) => setDimensions(e.target.value)}
                 className={inputClass}
-                placeholder="8 × 10 inches"
+                placeholder="6 × 8 inches"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Material</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Material</label>
               <input
                 type="text"
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
                 className={inputClass}
-                placeholder="300 GSM Cotton Paper"
+                placeholder="UV Resin, Gold Flakes"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Artwork Image URL / Preset</label>
-            <div className="flex gap-3 mb-3">
-              <input
-                type="text"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className={inputClass}
-                placeholder="/src/assets/images/... or https://..."
-              />
+          <div className="space-y-4 bg-[#FFF9F5] border border-[#E7C7CC] rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#3E2F27]">
+                  Product Photo URL / Upload *
+                </label>
+                <p className="text-[11px] text-[#7A655C]">
+                  Paste an image URL, upload a photo file directly to Supabase Storage, or choose a studio preset.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-xs font-medium cursor-pointer transition-colors shrink-0">
+                {uploadingImage ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                <span>{uploadingImage ? 'Uploading...' : 'Upload Photo File'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileUpload}
+                  className="sr-only"
+                  disabled={uploadingImage}
+                />
+              </label>
             </div>
-            <p className="text-xs text-[#6E655F] mb-2">Or select a studio asset preset:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {SAMPLE_IMAGE_OPTIONS.map((img) => (
-                <button
-                  key={img.label}
-                  type="button"
-                  onClick={() => setImageUrl(img.url)}
-                  className={`p-2 rounded-xl border text-xs text-left truncate transition-colors ${
-                    imageUrl === img.url
-                      ? 'bg-[#C86D51]/15 border-[#C86D51] font-medium text-[#2B2623]'
-                      : 'bg-[#FAF7F2] border-[#EAE3D5] text-[#6E655F]'
-                  }`}
-                >
-                  <ImageIcon className="w-3.5 h-3.5 mb-1 text-[#C86D51]" />
-                  <span className="truncate block">{img.label}</span>
-                </button>
-              ))}
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="w-24 h-24 rounded-xl overflow-hidden border border-[#E7C7CC] bg-white shrink-0">
+                <ResilientImage
+                  src={imageUrl}
+                  alt={name || 'Product photo preview'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1 w-full space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-medium text-[#7A655C] mb-1">
+                    Primary Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    className={inputClass}
+                    placeholder="https://... or /assets/..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#7A655C] mb-1">
+                    Secondary Hover Image URL (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={secondaryImageUrl}
+                    onChange={(e) => setSecondaryImageUrl(e.target.value)}
+                    className={inputClass}
+                    placeholder="Leave blank to reuse primary image"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-[#7A655C] mb-2">Or select a studio asset preset:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {SAMPLE_IMAGE_OPTIONS.map((img) => (
+                  <button
+                    key={img.label}
+                    type="button"
+                    onClick={() => setImageUrl(img.url)}
+                    className={`p-2 rounded-xl border text-xs text-left truncate transition-colors ${
+                      imageUrl === img.url
+                        ? 'bg-[#6D1836]/10 border-[#6D1836] font-medium text-[#3E2F27]'
+                        : 'bg-white border-[#E7C7CC] text-[#7A655C]'
+                    }`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 mb-1 text-[#6D1836]" />
+                    <span className="truncate block">{img.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Description *</label>
+            <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+              Description *
+            </label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={inputClass}
-              placeholder="Detailed artwork description..."
+              placeholder="Detailed description of this handmade creation..."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Studio Story</label>
+            <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Studio Story</label>
             <textarea
               rows={2}
               value={story}
               onChange={(e) => setStory(e.target.value)}
               className={inputClass}
-              placeholder="Inspiration and creation process..."
+              placeholder="Inspiration and crafting story..."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Artist&apos;s Note</label>
+            <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+              Maker&apos;s Note
+            </label>
             <input
               type="text"
               value={artistNote}
               onChange={(e) => setArtistNote(e.target.value)}
               className={inputClass}
-              placeholder="Signed on reverse..."
+              placeholder="Crafted with thought, gifted with heart..."
             />
           </div>
 
+          {error && (
+            <p className="text-xs font-medium text-[#6D1836] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-4 py-3">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3.5 px-6 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium inline-flex items-center justify-center gap-2 shadow-warm transition-colors"
+            disabled={saving || uploadingImage}
+            className="w-full py-3.5 px-6 rounded-xl bg-[#6D1836] hover:bg-[#541129] disabled:opacity-60 text-[#FFF9F5] text-sm font-medium inline-flex items-center justify-center gap-2 shadow-warm transition-colors"
           >
-            <Save className="w-4 h-4" />
-            <span>{isEditing ? 'Save Product Changes' : 'Publish Product to Storefront'}</span>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>
+              {saving
+                ? 'Saving Changes...'
+                : isEditing
+                  ? 'Save Product Changes'
+                  : 'Publish Product to Storefront'}
+            </span>
           </button>
         </form>
       </div>

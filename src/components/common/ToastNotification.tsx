@@ -20,15 +20,15 @@ export const ToastNotification: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="pointer-events-auto flex items-start gap-3 bg-white border border-[#EAE3D5] shadow-warm rounded-xl px-4 py-3 text-[#2B2623]"
+            className="pointer-events-auto flex items-start gap-3 bg-white border border-[#E7C7CC] shadow-warm rounded-xl px-4 py-3 text-[#3E2F27]"
           >
             <span
               className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                 toast.type === 'error'
-                  ? 'bg-[#C86D51]/15 text-[#B2593E]'
+                  ? 'bg-[#6D1836]/15 text-[#6D1836]'
                   : toast.type === 'info'
-                    ? 'bg-[#F3EDE2] text-[#6E655F]'
-                    : 'bg-[#7A9178]/15 text-[#7A9178]'
+                    ? 'bg-[#F8EFEA] text-[#7A655C]'
+                    : 'bg-[#C9A66B]/20 text-[#8C6B3F]'
               }`}
             >
               {toast.type === 'error' ? (
@@ -40,15 +40,15 @@ export const ToastNotification: React.FC = () => {
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-[#2B2623] leading-snug">{toast.title}</p>
+              <p className="text-sm font-medium text-[#3E2F27] leading-snug">{toast.title}</p>
               {toast.subtitle && (
-                <p className="text-xs text-[#6E655F] mt-0.5 truncate">{toast.subtitle}</p>
+                <p className="text-xs text-[#7A655C] mt-0.5 truncate">{toast.subtitle}</p>
               )}
             </div>
             <button
               type="button"
               onClick={() => dismissToast(toast.id)}
-              className="text-[#6E655F] hover:text-[#2B2623] p-1 -mr-1 rounded-md transition-colors"
+              className="text-[#7A655C] hover:text-[#3E2F27] p-1 -mr-1 rounded-md transition-colors"
               aria-label="Dismiss notification"
             >
               <X className="w-3.5 h-3.5" />

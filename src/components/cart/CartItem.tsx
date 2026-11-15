@@ -21,11 +21,11 @@ export const CartItemRow: React.FC<CartItemProps> = ({ item, compact = false, on
   if (!product) return null;
 
   return (
-    <div className="flex gap-3.5 py-4 border-b border-[#EAE3D5] last:border-b-0">
+    <div className="flex gap-3.5 py-4 border-b border-[#E7C7CC] last:border-b-0">
       <Link
         to={`/product/${product.slug}`}
         onClick={onNavigate}
-        className={`${compact ? 'w-20 h-20' : 'w-24 h-24'} rounded-xl overflow-hidden border border-[#EAE3D5] bg-[#F3EDE2] shrink-0`}
+        className={`${compact ? 'w-20 h-20' : 'w-24 h-24'} rounded-xl overflow-hidden border border-[#E7C7CC] bg-[#F8EFEA] shrink-0`}
       >
         <ResilientImage
           src={product.images[0]}
@@ -40,15 +40,15 @@ export const CartItemRow: React.FC<CartItemProps> = ({ item, compact = false, on
             <Link
               to={`/product/${product.slug}`}
               onClick={onNavigate}
-              className="font-display text-sm sm:text-base font-medium text-[#2B2623] hover:text-[#C86D51] transition-colors truncate"
+              className="font-display text-sm sm:text-base font-medium text-[#3E2F27] hover:text-[#6D1836] transition-colors truncate"
             >
               {product.name}
             </Link>
-            <span className="text-sm font-semibold text-[#2B2623] tabular-nums shrink-0">
+            <span className="text-sm font-semibold text-[#3E2F27] tabular-nums shrink-0">
               {formatINR(product.price * item.quantity)}
             </span>
           </div>
-          <p className="text-xs text-[#6E655F] mt-0.5 truncate">
+          <p className="text-xs text-[#7A655C] mt-0.5 truncate">
             {product.medium} · {formatINR(product.price)} each
           </p>
         </div>
@@ -66,7 +66,7 @@ export const CartItemRow: React.FC<CartItemProps> = ({ item, compact = false, on
               <button
                 type="button"
                 onClick={() => saveCartItemForLater(product.id)}
-                className="inline-flex items-center gap-1 text-xs text-[#6E655F] hover:text-[#C86D51] px-2 py-1 rounded-md transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-[#7A655C] hover:text-[#6D1836] px-2 py-1 rounded-md transition-colors"
               >
                 <Bookmark className="w-3.5 h-3.5" />
                 <span>Save for later</span>
@@ -75,7 +75,7 @@ export const CartItemRow: React.FC<CartItemProps> = ({ item, compact = false, on
             <button
               type="button"
               onClick={() => removeFromCart(product.id)}
-              className="inline-flex items-center gap-1 text-xs text-[#6E655F] hover:text-[#B2593E] px-2 py-1 rounded-md transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-[#7A655C] hover:text-[#541129] px-2 py-1 rounded-md transition-colors"
               aria-label={`Remove ${product.name} from bag`}
             >
               <Trash2 className="w-3.5 h-3.5" />

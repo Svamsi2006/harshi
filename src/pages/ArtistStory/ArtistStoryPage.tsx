@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, PenTool } from 'lucide-react';
-import { STUDIO_IMAGES } from '../../data/products';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { STUDIO_MEDIA } from '../../data/studioImages';
 import { PageTransition } from '../../components/common/PageTransition';
 import { ResilientImage } from '../../components/common/ResilientImage';
 import { BotanicalSprig, OrganicDivider } from '../../components/common/BotanicalDecorations';
@@ -10,134 +10,137 @@ export const ArtistStoryPage: React.FC = () => {
   return (
     <PageTransition className="py-10 sm:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 sm:space-y-20">
-        {/* 1. Artist Introduction */}
+        {/* 1. About Us Introduction */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-6 space-y-5">
-            <p className="font-handwritten text-2xl text-[#C86D51]">Inside varniks_atelier</p>
-            <h1 className="font-display text-4xl sm:text-5xl font-medium text-[#2B2623] leading-[1.1] text-balance">
-              A sunlit corner where paper, clay &amp; quiet mornings meet.
-            </h1>
-            <p className="text-base text-[#6E655F] leading-relaxed">
-              Hello, I&apos;m Varnika — an illustrator, ceramicist, and quiet collector of everyday
-              textures. `varniks_atelier` began with a single teak desk by a north-facing window,
-              a bundle of willow charcoal, and a desire to make objects that carry the warmth of
-              human hands into modern homes.
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#6D1836]">
+              Handmade • Heartmade • Heartfelt
             </p>
-            <p className="font-handwritten text-2xl text-[#2B2623]">
-              “Nothing leaves the studio until it feels peaceful to hold.”
+            <h1 className="font-display text-4xl sm:text-5xl font-medium text-[#3E2F27] leading-[1.1] text-balance">
+              Crafted with thought, gifted with heart.
+            </h1>
+            <p className="text-base text-[#7A655C] leading-relaxed">
+              Welcome to <strong className="font-medium text-[#3E2F27]">varniks_atelier</strong> —
+              a warm, Pinterest-inspired handmade studio dedicated to turning meaningful memories
+              into tangible keepsakes. From pressed-flower resin art and soft pipe-cleaner
+              bouquets to glowing LED memory frames, layered paper keepsakes, hand-stitched
+              embroidery, personalized accessories, and custom portraits, every piece is shaped
+              slowly with care.
+            </p>
+            <p className="font-handwritten text-2xl text-[#6D1836]">
+              “The best gifts hold a memory you can hold in your hands.”
             </p>
           </div>
 
           <div className="lg:col-span-6 relative">
-            <div className="bg-white p-3 pb-6 rounded-sm border border-[#EAE3D5] shadow-polaroid rotate-1">
-              <div className="aspect-[16/10] overflow-hidden bg-[#F3EDE2]">
+            <div className="bg-white p-3 pb-6 rounded-sm border border-[#E7C7CC] shadow-polaroid rotate-1">
+              <div className="aspect-[16/10] overflow-hidden bg-[#F8EFEA]">
                 <ResilientImage
-                  src={STUDIO_IMAGES.studioDesk}
-                  alt="Varnika working at the sunlit studio workbench"
+                  src={STUDIO_MEDIA.artistStudioDesk}
+                  alt="varniks_atelier handmade crafting desk"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <p className="font-handwritten text-xl text-[#2B2623] mt-3 text-center">
-                Morning light across our studio workbench
+              <p className="font-handwritten text-xl text-[#3E2F27] mt-3 text-center">
+                Inside the studio workbench
               </p>
             </div>
-            <BotanicalSprig className="hidden sm:block absolute -right-8 -bottom-8 w-24 h-28 text-[#7A9178]/40 rotate-12" />
+            <BotanicalSprig className="hidden sm:block absolute -right-8 -bottom-8 w-24 h-28 text-[#C9A66B]/45 rotate-12" />
           </div>
         </section>
 
         <OrganicDivider />
 
-        {/* 2. How the studio started & Inspiration */}
+        {/* 2. Our Craft & Purpose */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-5 order-2 lg:order-1">
-            <div className="bg-white p-3 pb-6 rounded-sm border border-[#EAE3D5] shadow-polaroid -rotate-2">
-              <div className="aspect-[4/3] overflow-hidden bg-[#F3EDE2]">
+            <div className="bg-white p-3 pb-6 rounded-sm border border-[#E7C7CC] shadow-polaroid -rotate-2">
+              <div className="aspect-[4/3] overflow-hidden bg-[#F8EFEA]">
                 <ResilientImage
-                  src={STUDIO_IMAGES.artistHands}
-                  alt="Artist hands sketching botanical leaves on cotton paper"
+                  src={STUDIO_MEDIA.resinFloralKeepsake}
+                  alt="Pressed botanical resin keepsake craftsmanship"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <p className="font-handwritten text-xl text-[#2B2623] mt-3 text-center">
-                Botanical study on 300 GSM cotton rag
+              <p className="font-handwritten text-xl text-[#3E2F27] mt-3 text-center">
+                Real pressed blooms &amp; golden details
               </p>
             </div>
           </div>
 
           <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
             <div className="space-y-3">
-              <h2 className="font-display text-2xl sm:text-3xl font-medium text-[#2B2623]">
-                How the Studio Started
+              <h2 className="font-display text-2xl sm:text-3xl font-medium text-[#3E2F27]">
+                About Us &amp; Our Studio
               </h2>
-              <p className="text-sm sm:text-base text-[#6E655F] leading-relaxed">
-                After years of sketching architectural courtyards and village pottery markets in
-                spiral notebooks, friends began asking for framed pieces for their living rooms.
-                In 2024, those travel sketchbooks grew into a full independent craft room—pairing
-                graphite drawing with small-batch terracotta firing and collaborations with local
-                woodcarvers and jute weavers.
+              <p className="text-sm sm:text-base text-[#7A655C] leading-relaxed">
+                What started as handmade birthday hampers and keepsake frames for close friends grew
+                into varniks_atelier—a cozy studio where thoughtful gifting replaces rushed,
+                mass-made items. Every resin pour cures over 48 hours, every pipe-cleaner tulip is
+                hand-twisted petal by petal, and every portrait or photo frame is styled around
+                your story.
               </p>
             </div>
 
             <div className="space-y-3">
-              <h2 className="font-display text-2xl sm:text-3xl font-medium text-[#2B2623]">
-                What Inspires Every Piece
+              <h2 className="font-display text-2xl sm:text-3xl font-medium text-[#3E2F27]">
+                Designed for Personal Moments
               </h2>
-              <p className="text-sm sm:text-base text-[#6E655F] leading-relaxed">
-                Monsoon rain on red-oxide verandahs, wild marigolds wrapped in newspaper, clay
-                kulhads cooling by roadside tea stalls, and the unhurried rhythm of traditional
-                Indian craft. Rather than chasing seasonal trends, every collection is built around
-                earthy pigments, raw unbleached fibers, and honest materials that age gracefully.
+              <p className="text-sm sm:text-base text-[#7A655C] leading-relaxed">
+                Whether you are celebrating an anniversary, graduation, housewarming, or simply
+                sending love from afar, our seven signature craft categories bring warmth, blush
+                tones, gold accents, and heartfelt detail to every gift box.
               </p>
             </div>
           </div>
         </section>
 
-        {/* 3. Handmade Philosophy & Creative Process */}
-        <section className="bg-[#F3EDE2]/75 border border-[#EAE3D5] rounded-3xl p-8 sm:p-12 space-y-8">
+        {/* 3. Studio Pillars */}
+        <section className="bg-[#F8EFEA] border border-[#E7C7CC] rounded-3xl p-8 sm:p-12 space-y-8">
           <div className="max-w-2xl">
-            <p className="font-handwritten text-2xl text-[#C86D51]">Our Philosophy</p>
-            <h2 className="font-display text-3xl font-medium text-[#2B2623] mt-1">
-              Slow Craft Over Mass Production
+            <p className="font-handwritten text-2xl text-[#6D1836]">Our Promise</p>
+            <h2 className="font-display text-3xl font-medium text-[#3E2F27] mt-1">
+              Premium, Minimal &amp; Heartmade
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
-              <span className="text-xs font-semibold tracking-wider text-[#C86D51]">
-                01. Archival Materials
+              <span className="text-xs font-semibold tracking-wider text-[#6D1836]">
+                01. Curated Materials
               </span>
-              <h3 className="font-display text-xl font-medium text-[#2B2623]">
-                Cotton Rag &amp; River Clay
+              <h3 className="font-display text-xl font-medium text-[#3E2F27]">
+                Crystal Resin &amp; Fine Fibers
               </h3>
-              <p className="text-sm text-[#6E655F] leading-relaxed">
-                We draw exclusively on acid-free 300+ GSM cotton paper and sculpt with unrefined
-                alluvial clay so artworks last for decades without yellowing or flaking.
+              <p className="text-sm text-[#7A655C] leading-relaxed">
+                We use non-yellowing UV-resistant resin, soft velvet chenille stems, warm LED
+                accents, archival cotton paper, and natural linen threads.
               </p>
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-semibold tracking-wider text-[#C86D51]">
-                02. Unhurried Editions
+              <span className="text-xs font-semibold tracking-wider text-[#6D1836]">
+                02. Collaborative Custom Orders
               </span>
-              <h3 className="font-display text-xl font-medium text-[#2B2623]">
-                1-of-1 &amp; Small Batches
+              <h3 className="font-display text-xl font-medium text-[#3E2F27]">
+                Your Idea + Photo
               </h3>
-              <p className="text-sm text-[#6E655F] leading-relaxed">
-                Originals are truly singular. Even our prints and woven homeware are released in
-                numbered studio runs—never warehoused in bulk.
+              <p className="text-sm text-[#7A655C] leading-relaxed">
+                Share your idea, attach a photo, choose your predicted budget or enter a custom
+                price, and approve the studio quote before your order is placed.
               </p>
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-semibold tracking-wider text-[#C86D51]">
-                03. Conscious Wrapping
+              <span className="text-xs font-semibold tracking-wider text-[#6D1836]">
+                03. Gift-Ready Unboxing
               </span>
-              <h3 className="font-display text-xl font-medium text-[#2B2623]">
-                Zero Plastic Cushioning
+              <h3 className="font-display text-xl font-medium text-[#3E2F27]">
+                Tucked With Ribbon &amp; Note
               </h3>
-              <p className="text-sm text-[#6E655F] leading-relaxed">
-                Every parcel leaves in recycled kraft boxes, honeycomb paper sleeves, jute twine,
-                and a wax-stamped studio care card.
+              <p className="text-sm text-[#7A655C] leading-relaxed">
+                Every parcel arrives wrapped in blush tissue, protective cushioning, and a
+                handwritten message card ready to hand straight to someone special.
               </p>
             </div>
           </div>
@@ -145,27 +148,27 @@ export const ArtistStoryPage: React.FC = () => {
 
         {/* 4. CTA */}
         <section className="text-center space-y-5 py-4">
-          <h2 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
-            Bring a piece of the studio home
+          <h2 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
+            Explore ready creations or customize your own
           </h2>
-          <p className="text-sm sm:text-base text-[#6E655F] max-w-lg mx-auto">
-            Browse available original sketches and sculptures, or collaborate with Varnika on a
-            bespoke piece for your space.
+          <p className="text-sm sm:text-base text-[#7A655C] max-w-lg mx-auto">
+            Browse our seven handmade categories or send your custom idea &amp; reference photo to
+            our studio waiting list.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-sm font-medium transition-colors"
             >
-              <span>Explore the Collection</span>
+              <span>Shop All Works</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              to="/commission"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white border border-[#EAE3D5] hover:border-[#C86D51] text-sm font-medium text-[#2B2623] transition-colors"
+              to="/custom-orders"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white border border-[#E7C7CC] hover:border-[#6D1836] text-sm font-medium text-[#3E2F27] transition-colors"
             >
-              <PenTool className="w-4 h-4 text-[#C86D51]" />
-              <span>Request a Commission</span>
+              <Sparkles className="w-4 h-4 text-[#C9A66B]" />
+              <span>Create Custom Order</span>
             </Link>
           </div>
         </section>

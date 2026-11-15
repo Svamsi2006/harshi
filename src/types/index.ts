@@ -1,16 +1,16 @@
-export type CategoryKey =
-  | 'all'
-  | 'sketches'
-  | 'clay-terracotta'
-  | 'wood-woven'
-  | 'paintings'
-  | 'prints';
+export type CategoryKey = string;
 
-export type RouteCategorySlug = 'sketches' | 'handicrafts' | 'paintings' | 'prints';
+export interface CategoryItem {
+  id: string;
+  slug: string;
+  label: string;
+  subtitle: string;
+  isDefault?: boolean;
+}
 
-export type ProductWorkType = 'Original 1-of-1' | 'Limited Edition Print' | 'Handmade Craft';
+export type ProductWorkType = 'Handmade Keepsake' | 'Custom Made' | 'Original Artwork';
 
-export type ProductBadgeType = 'Handmade' | 'Bestseller' | 'Only 1 Left' | 'Limited Run';
+export type ProductBadgeType = 'Handmade' | 'Bestseller' | 'Only 1 Left' | 'Limited Run' | 'Customizable';
 
 export interface ProductSpecification {
   medium: string;
@@ -29,9 +29,9 @@ export interface Product {
   description: string;
   story: string;
   artistNote: string;
-  category: Exclude<CategoryKey, 'all'>;
+  category: string;
   categoryLabel: string;
-  routeGroup: RouteCategorySlug;
+  routeGroup: string;
   price: number;
   originalPrice?: number;
   costPrice?: number;
@@ -88,7 +88,15 @@ export interface Address {
   isDefault: boolean;
 }
 
-export type OrderStatus = 'Pending' | 'Confirmed' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Refunded';
+export type OrderStatus =
+  | 'Pending'
+  | 'Confirmed'
+  | 'Processing'
+  | 'Packed'
+  | 'Shipped'
+  | 'Delivered'
+  | 'Cancelled'
+  | 'Refunded';
 
 export type PaymentMethod = 'razorpay' | 'stripe';
 
@@ -120,20 +128,45 @@ export interface Order {
   trackingCode?: string;
   courierName?: string;
   estimatedDelivery: string;
+  isCustomOrder?: boolean;
+  customRequestId?: string;
+  paymentReference?: string;
 }
+
+export type CustomOrderStatus =
+  | 'Waiting List'
+  | 'Reviewing'
+  | 'Admin Approved'
+  | 'Customer Approved'
+  | 'Order Created'
+  | 'In Progress'
+  | 'Completed'
+  | 'Rejected';
 
 export interface CommissionRequest {
   id: string;
+  customerId?: string;
   customerName: string;
   email: string;
   phone: string;
+  categorySlug: string;
+  categoryLabel: string;
+  customIdea: string;
   artworkType: string;
   preferredStyle: string;
   approximateSize: string;
   budgetRange: string;
+  isCustomPrice: boolean;
+  predictedPrice?: number;
+  hasUploadedFile: boolean;
   referenceImageName?: string;
+  referenceImageData?: string;
   description: string;
-  status: 'New' | 'Reviewing' | 'Quoted' | 'Accepted' | 'In Progress' | 'Completed' | 'Rejected';
+  status: CustomOrderStatus;
+  adminApproved: boolean;
+  customerApproved: boolean;
+  orderCreated: boolean;
+  linkedOrderId?: string;
   quotedPrice?: number;
   internalNotes?: string;
   submittedAt: string;
@@ -157,13 +190,18 @@ export interface StoreSettings {
   freeShippingThreshold: number;
   defaultShippingFee: number;
   announcementText: string;
+  logoUrl?: string;
+  chatbotEnabled?: boolean;
+  openrouterModel?: string;
+  hasOpenrouterKey?: boolean;
+  openrouterKeyMasked?: string;
 }
 
 export interface FilterState {
   category: CategoryKey;
   priceRange: 'all' | 'under-1200' | '1200-2500' | 'above-2500';
   availability: 'all' | 'in-stock' | 'last-piece';
-  workType: 'all' | 'original' | 'prints' | 'craft';
+  workType: 'all' | 'handmade' | 'custom' | 'original';
   sortBy: 'newest' | 'price-asc' | 'price-desc' | 'bestselling';
 }
 

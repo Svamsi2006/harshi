@@ -21,7 +21,7 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
 
   return (
     <div
-      className="inline-flex items-center rounded-xl border border-[#EAE3D5] bg-white overflow-hidden"
+      className="inline-flex items-center rounded-xl border border-[#E7C7CC] bg-white overflow-hidden"
       role="group"
       aria-label="Quantity selector"
     >
@@ -29,13 +29,13 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className={`${btnSize} flex items-center justify-center text-[#2B2623] hover:bg-[#F3EDE2] disabled:opacity-35 disabled:cursor-not-allowed transition-colors`}
+        className={`${btnSize} flex items-center justify-center text-[#3E2F27] hover:bg-[#F8EFEA] disabled:opacity-35 disabled:cursor-not-allowed transition-colors`}
         aria-label="Decrease quantity"
       >
         <Minus className="w-3.5 h-3.5" />
       </button>
       <span
-        className={`${textSize} text-center font-medium text-[#2B2623] tabular-nums select-none`}
+        className={`${textSize} text-center font-medium text-[#3E2F27] tabular-nums select-none`}
         aria-live="polite"
       >
         {value}
@@ -44,7 +44,7 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className={`${btnSize} flex items-center justify-center text-[#2B2623] hover:bg-[#F3EDE2] disabled:opacity-35 disabled:cursor-not-allowed transition-colors`}
+        className={`${btnSize} flex items-center justify-center text-[#3E2F27] hover:bg-[#F8EFEA] disabled:opacity-35 disabled:cursor-not-allowed transition-colors`}
         aria-label="Increase quantity"
       >
         <Plus className="w-3.5 h-3.5" />

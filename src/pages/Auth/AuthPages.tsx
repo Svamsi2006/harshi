@@ -11,13 +11,13 @@ const AuthShell: React.FC<{
   children: React.ReactNode;
 }> = ({ title, subtitle, children }) => (
   <PageTransition className="py-12 sm:py-16 px-4">
-    <div className="max-w-md mx-auto bg-white border border-[#EAE3D5] rounded-3xl p-7 sm:p-9 shadow-warm space-y-6">
+    <div className="max-w-md mx-auto bg-white border border-[#E7C7CC] rounded-3xl p-7 sm:p-9 shadow-warm space-y-6">
       <div className="text-center space-y-2">
         <div className="flex justify-center pb-1">
           <BrandLogo to="/" size="sm" />
         </div>
-        <h1 className="font-display text-2xl sm:text-3xl font-medium text-[#2B2623]">{title}</h1>
-        <p className="text-sm text-[#6E655F]">{subtitle}</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-medium text-[#3E2F27]">{title}</h1>
+        <p className="text-sm text-[#7A655C]">{subtitle}</p>
       </div>
       {children}
     </div>
@@ -25,7 +25,7 @@ const AuthShell: React.FC<{
 );
 
 const inputClass =
-  'w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]';
+  'w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]';
 
 export const LoginPage: React.FC = () => {
   const { loginWithCredentials, loginAsDemoCustomer } = useStore();
@@ -62,13 +62,13 @@ export const LoginPage: React.FC = () => {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p className="text-xs text-[#B2593E] bg-[#C86D51]/10 border border-[#C86D51]/25 rounded-xl px-3.5 py-2.5">
+          <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
             {error}
           </p>
         )}
 
         <div>
-          <label htmlFor="login-email" className="block text-xs font-medium text-[#6E655F] mb-1.5">
+          <label htmlFor="login-email" className="block text-xs font-medium text-[#7A655C] mb-1.5">
             Email Address
           </label>
           <input
@@ -83,12 +83,12 @@ export const LoginPage: React.FC = () => {
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label htmlFor="login-password" className="block text-xs font-medium text-[#6E655F]">
+            <label htmlFor="login-password" className="block text-xs font-medium text-[#7A655C]">
               Password
             </label>
             <Link
               to="/forgot-password"
-              className="text-xs font-medium text-[#C86D51] hover:text-[#B2593E]"
+              className="text-xs font-medium text-[#6D1836] hover:text-[#541129]"
             >
               Forgot password?
             </Link>
@@ -105,7 +105,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowPwd((s) => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6E655F] hover:text-[#2B2623]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A655C] hover:text-[#3E2F27]"
               aria-label={showPwd ? 'Hide password' : 'Show password'}
             >
               {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -113,49 +113,49 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <label className="inline-flex items-center gap-2 text-xs text-[#6E655F] cursor-pointer">
+        <label className="inline-flex items-center gap-2 text-xs text-[#7A655C] cursor-pointer">
           <input
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="rounded border-[#EAE3D5] text-[#C86D51]"
+            className="rounded border-[#E7C7CC] text-[#6D1836]"
           />
           <span>Remember me on this device</span>
         </label>
 
         <button
           type="submit"
-          className="w-full py-3 px-5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+          className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
         >
           Sign In
         </button>
       </form>
 
-      <div className="pt-4 border-t border-[#EAE3D5] space-y-3">
+      <div className="pt-4 border-t border-[#E7C7CC] space-y-3">
         <button
           type="button"
           onClick={() => {
             loginAsDemoCustomer();
             navigate('/account');
           }}
-          className="w-full py-2.5 px-4 rounded-xl bg-[#F3EDE2] hover:bg-[#EAE3D5] text-xs font-medium text-[#2B2623] inline-flex items-center justify-center gap-1.5 transition-colors"
+          className="w-full py-2.5 px-4 rounded-xl bg-[#F8EFEA] hover:bg-[#E7C7CC] text-xs font-medium text-[#3E2F27] inline-flex items-center justify-center gap-1.5 transition-colors"
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#C86D51]" />
+          <Sparkles className="w-3.5 h-3.5 text-[#6D1836]" />
           <span>Sign in with Demo Collector Account (Ananya)</span>
         </button>
 
         <div className="text-center">
           <Link
             to="/admin/login"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#C86D51] hover:text-[#B2593E]"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#6D1836] hover:text-[#541129]"
           >
             <span>Studio Owner? Open Admin Login →</span>
           </Link>
         </div>
 
-        <p className="text-center text-xs text-[#6E655F]">
+        <p className="text-center text-xs text-[#7A655C]">
           New to varniks_atelier?{' '}
-          <Link to="/register" className="font-semibold text-[#C86D51] hover:text-[#B2593E]">
+          <Link to="/register" className="font-semibold text-[#6D1836] hover:text-[#541129]">
             Create an account
           </Link>
         </p>
@@ -205,13 +205,13 @@ export const RegisterPage: React.FC = () => {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p className="text-xs text-[#B2593E] bg-[#C86D51]/10 border border-[#C86D51]/25 rounded-xl px-3.5 py-2.5">
+          <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
             {error}
           </p>
         )}
 
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Full Name</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Full Name</label>
           <input
             type="text"
             value={fullName}
@@ -222,7 +222,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Email Address</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Email Address</label>
           <input
             type="email"
             value={email}
@@ -233,7 +233,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Phone Number</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Phone Number</label>
           <input
             type="tel"
             value={phone}
@@ -244,7 +244,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Password</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Password</label>
           <div className="relative">
             <input
               type={showPwd ? 'text' : 'password'}
@@ -256,7 +256,7 @@ export const RegisterPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowPwd((s) => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6E655F]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A655C]"
               aria-label={showPwd ? 'Hide password' : 'Show password'}
             >
               {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -265,7 +265,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
             Confirm Password
           </label>
           <input
@@ -279,15 +279,15 @@ export const RegisterPage: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full py-3 px-5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+          className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
         >
           Create Account
         </button>
       </form>
 
-      <p className="text-center text-xs text-[#6E655F] pt-2 border-t border-[#EAE3D5]">
+      <p className="text-center text-xs text-[#7A655C] pt-2 border-t border-[#E7C7CC]">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-[#C86D51] hover:text-[#B2593E]">
+        <Link to="/login" className="font-semibold text-[#6D1836] hover:text-[#541129]">
           Sign in
         </Link>
       </p>
@@ -317,15 +317,15 @@ export const ForgotPasswordPage: React.FC = () => {
     >
       {sent ? (
         <div className="text-center space-y-4 py-2">
-          <div className="w-12 h-12 rounded-full bg-[#7A9178]/15 text-[#7A9178] flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-full bg-[#C9A66B]/15 text-[#C9A66B] flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-6 h-6" />
           </div>
-          <p className="text-sm text-[#2B2623]">
+          <p className="text-sm text-[#3E2F27]">
             Recovery instructions have been sent to <strong>{email}</strong>.
           </p>
           <Link
             to="/login"
-            className="inline-block w-full py-3 px-5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+            className="inline-block w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
           >
             Return to Sign In
           </Link>
@@ -333,12 +333,12 @@ export const ForgotPasswordPage: React.FC = () => {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <p className="text-xs text-[#B2593E] bg-[#C86D51]/10 border border-[#C86D51]/25 rounded-xl px-3.5 py-2.5">
+            <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
               {error}
             </p>
           )}
           <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+            <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
               Email Address
             </label>
             <input
@@ -351,13 +351,13 @@ export const ForgotPasswordPage: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-3 px-5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+            className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
           >
             Send Reset Link
           </button>
-          <p className="text-center text-xs text-[#6E655F]">
+          <p className="text-center text-xs text-[#7A655C]">
             Remembered your password?{' '}
-            <Link to="/login" className="font-semibold text-[#C86D51]">
+            <Link to="/login" className="font-semibold text-[#6D1836]">
               Back to Sign In
             </Link>
           </p>

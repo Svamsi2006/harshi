@@ -4,15 +4,17 @@ import { useStore } from '../context/StoreContext';
 
 export function useFilteredProducts(
   filters: FilterState,
-  routeGroup?: Product['routeGroup']
+  routeCategorySlug?: string
 ): Product[] {
   const { products } = useStore();
 
   return useMemo(() => {
     let list = [...products].filter((p) => p.isPublished !== false);
 
-    if (routeGroup) {
-      list = list.filter((p) => p.routeGroup === routeGroup);
+    if (routeCategorySlug) {
+      list = list.filter(
+        (p) => p.routeGroup === routeCategorySlug || p.category === routeCategorySlug
+      );
     }
 
     if (filters.category !== 'all') {
@@ -33,12 +35,12 @@ export function useFilteredProducts(
       list = list.filter((p) => p.stock === 1);
     }
 
-    if (filters.workType === 'original') {
-      list = list.filter((p) => p.productType === 'Original 1-of-1');
-    } else if (filters.workType === 'prints') {
-      list = list.filter((p) => p.productType === 'Limited Edition Print');
-    } else if (filters.workType === 'craft') {
-      list = list.filter((p) => p.productType === 'Handmade Craft');
+    if (filters.workType === 'handmade') {
+      list = list.filter((p) => p.productType === 'Handmade Keepsake');
+    } else if (filters.workType === 'custom') {
+      list = list.filter((p) => p.productType === 'Custom Made');
+    } else if (filters.workType === 'original') {
+      list = list.filter((p) => p.productType === 'Original Artwork');
     }
 
     switch (filters.sortBy) {
@@ -58,5 +60,5 @@ export function useFilteredProducts(
     }
 
     return list;
-  }, [filters, products, routeGroup]);
+  }, [filters, products, routeCategorySlug]);
 }

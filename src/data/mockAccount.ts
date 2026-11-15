@@ -42,26 +42,26 @@ export const INITIAL_ORDERS: Order[] = [
     date: '2026-11-08',
     items: [
       {
-        productId: 'va-02',
-        name: 'Terracotta Ganesha',
-        slug: 'terracotta-ganesha',
-        image: STUDIO_MEDIA.terracottaGanesha,
+        productId: 'va-05',
+        name: 'Golden Glow Pressed Flower LED Frame',
+        slug: 'pressed-botanical-led-memory-frame',
+        image: STUDIO_MEDIA.ledMemoryFrame,
         price: 2199,
         quantity: 1,
       },
       {
-        productId: 'va-08',
-        name: 'Marigold & Eucalyptus Print',
-        slug: 'marigold-eucalyptus-print',
-        image: STUDIO_MEDIA.printBotanicalMarigold,
-        price: 899,
+        productId: 'va-11',
+        name: 'Gold-Flake Initial Keychain & Pearl Bag Charm',
+        slug: 'personalized-floral-initial-keychain-set',
+        image: STUDIO_MEDIA.personalizedAccessoriesCharm,
+        price: 699,
         quantity: 1,
       },
     ],
-    subtotal: 3098,
+    subtotal: 2898,
     shippingFee: 0,
     discount: 0,
-    total: 3098,
+    total: 2898,
     paymentMethod: 'razorpay',
     paymentStatus: 'Paid',
     orderStatus: 'Shipped',
@@ -84,18 +84,18 @@ export const INITIAL_ORDERS: Order[] = [
     date: '2026-09-21',
     items: [
       {
-        productId: 'va-03',
-        name: 'Serene Lake Print',
-        slug: 'serene-lake-print',
-        image: STUDIO_MEDIA.watercolorSereneLake,
-        price: 999,
-        quantity: 2,
+        productId: 'va-07',
+        name: 'Wax-Sealed Story & Polaroid Keepsake Box',
+        slug: 'wax-sealed-polaroid-memory-box',
+        image: STUDIO_MEDIA.paperPhotoKeepsake,
+        price: 1849,
+        quantity: 1,
       },
     ],
-    subtotal: 1998,
+    subtotal: 1849,
     shippingFee: 0,
     discount: 150,
-    total: 1848,
+    total: 1699,
     paymentMethod: 'stripe',
     paymentStatus: 'Paid',
     orderStatus: 'Delivered',
@@ -116,7 +116,7 @@ export const INITIAL_ORDERS: Order[] = [
 export const INITIAL_CART_HISTORY: CartHistoryEntry[] = [
   {
     id: 'hist-1',
-    productId: 'va-04',
+    productId: 'va-01',
     quantity: 1,
     priceAtEvent: 1299,
     action: 'saved',
@@ -124,15 +124,15 @@ export const INITIAL_CART_HISTORY: CartHistoryEntry[] = [
   },
   {
     id: 'hist-2',
-    productId: 'va-12',
+    productId: 'va-09',
     quantity: 1,
-    priceAtEvent: 1350,
+    priceAtEvent: 1599,
     action: 'removed',
     timestamp: '2026-11-09T17:40:00Z',
   },
   {
     id: 'hist-3',
-    productId: 'va-02',
+    productId: 'va-05',
     quantity: 1,
     priceAtEvent: 2199,
     action: 'checked_out',
@@ -143,44 +143,38 @@ export const INITIAL_CART_HISTORY: CartHistoryEntry[] = [
 export interface FaqItem {
   question: string;
   answer: string;
-  category: 'Artworks' | 'Shipping' | 'Commissions' | 'Care';
+  category: 'Creations' | 'Shipping' | 'Custom Orders' | 'Care';
 }
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
-    category: 'Artworks',
-    question: 'Are the pencil sketches and oil paintings true originals?',
+    category: 'Creations',
+    question: 'Are your resin florals, pipe cleaner bouquets, and embroidery truly handmade?',
     answer:
-      'Yes. Every item marked "Original 1-of-1" is an authentic, singular drawing or painting hand-crafted in our studio on archival cotton rag paper or stretched Belgian linen, signed by the artist.',
+      'Yes! Every resin coaster, fuzzy chenille bouquet, LED floral frame, embroidery hoop, scrapbook keepsake, and portrait is handcrafted inside our independent studio using real dried botanicals, cotton paper, and natural fibers.',
   },
   {
-    category: 'Artworks',
-    question: 'What is the difference between an Original and a Watercolor Print?',
+    category: 'Custom Orders',
+    question: 'How does the Custom Orders approval & waiting list process work?',
     answer:
-      'Originals are one-of-a-kind works directly from the easel. Our Watercolor Prints are museum-grade giclee editions printed with pigment inks on 310 GSM deckle-edge cotton paper, stamped and numbered by the studio.',
+      'Pick your category and idea, upload a reference photograph, and choose a predicted price range or enter your own custom price. Your request enters our studio Waiting List where we confirm the quote and mark Admin Approved. Once approved, you simply click Approve & Place Order to create your continuous order.',
   },
   {
     category: 'Shipping',
-    question: 'How do you protect fragile terracotta and unframed sketches during shipping?',
+    question: 'How do you protect LED glass frames, resin keepsakes, and bouquets during shipping?',
     answer:
-      'Sketches and prints ship flat between rigid archival boards inside moisture-sealed sleeves. Terracotta sculptures and stoneware are double-boxed using biodegradable honeycomb paper and wood-wool cushioning.',
+      'Frames and resin pieces are wrapped in protective kraft honeycomb sleeves and double-walled gift boxes. Bouquets and textile hoops travel in cushioned presentation boxes with blush tissue and velvet ties.',
   },
   {
     category: 'Shipping',
     question: 'When do orders ship and is free shipping available?',
     answer:
-      'Orders placed before 2 PM dispatch within 2–5 business days from our studio. Shipping is complimentary on all orders above ₹999 across India; orders under ₹999 carry a flat ₹95 studio packing & courier fee.',
-  },
-  {
-    category: 'Commissions',
-    question: 'How long does a custom artwork commission take?',
-    answer:
-      'Custom pencil portraits, architectural home sketches, and personalized terracotta pieces typically take 10–18 days depending on size and drying/kiln schedules. We share work-in-progress studio photos before wrapping.',
+      'Ready-to-ship pieces dispatch within 2–4 business days. Shipping is complimentary on all orders above ₹999 across India; orders under ₹999 carry a flat ₹95 studio packing & courier fee.',
   },
   {
     category: 'Care',
-    question: 'How should I care for raw unglazed terracotta and graphite drawings?',
+    question: 'How should I care for resin creations and embroidered textile hoops?',
     answer:
-      'Dust unglazed terracotta gently with a soft dry brush—avoid soaking in water. For charcoal and pencil works, we recommend framing under glass with an acid-free mat spacer and displaying away from damp walls.',
+      'Wipe resin gently with a soft dry microfiber cloth and keep out of prolonged direct midday sun. Lightly dust embroidery hoops and pipe cleaner blooms with a dry soft brush.',
   },
 ];

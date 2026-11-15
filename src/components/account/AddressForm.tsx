@@ -51,19 +51,19 @@ export const AddressForm: React.FC<AddressFormProps> = ({
   };
 
   const inputClass =
-    'w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]';
+    'w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <p className="text-xs text-[#B2593E] bg-[#C86D51]/10 border border-[#C86D51]/25 rounded-xl px-3.5 py-2.5">
+        <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
           {error}
         </p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Full Name *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Full Name *</label>
           <input
             type="text"
             value={fullName}
@@ -73,7 +73,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Phone Number *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Phone Number *</label>
           <input
             type="tel"
             value={phone}
@@ -85,7 +85,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+        <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
           Street Address, Studio / Flat No. *
         </label>
         <input
@@ -99,7 +99,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">City *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">City *</label>
           <input
             type="text"
             value={city}
@@ -109,7 +109,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">State *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">State *</label>
           <input
             type="text"
             value={state}
@@ -122,7 +122,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Postal Code *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Postal Code *</label>
           <input
             type="text"
             value={postalCode}
@@ -132,7 +132,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[#6E655F] mb-1.5">Country *</label>
+          <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Country *</label>
           <input
             type="text"
             value={country}
@@ -142,12 +142,12 @@ export const AddressForm: React.FC<AddressFormProps> = ({
         </div>
       </div>
 
-      <label className="inline-flex items-center gap-2 text-xs text-[#2B2623] cursor-pointer">
+      <label className="inline-flex items-center gap-2 text-xs text-[#3E2F27] cursor-pointer">
         <input
           type="checkbox"
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
-          className="rounded border-[#EAE3D5] text-[#C86D51] focus:ring-[#C86D51]"
+          className="rounded border-[#E7C7CC] text-[#6D1836] focus:ring-[#6D1836]"
         />
         <span>Set as default shipping address</span>
       </label>
@@ -155,7 +155,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          className="px-5 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+          className="px-5 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
         >
           {submitLabel}
         </button>
@@ -163,7 +163,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-2.5 rounded-xl border border-[#EAE3D5] text-sm font-medium text-[#6E655F] hover:text-[#2B2623] transition-colors"
+            className="px-5 py-2.5 rounded-xl border border-[#E7C7CC] text-sm font-medium text-[#7A655C] hover:text-[#3E2F27] transition-colors"
           >
             Cancel
           </button>

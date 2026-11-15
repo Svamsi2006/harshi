@@ -1,5 +1,5 @@
 import React from 'react';
-import { CATEGORY_TABS } from '../../data/products';
+import { useStore } from '../../context/StoreContext';
 import type { CategoryKey } from '../../types';
 
 interface CategoryPillsProps {
@@ -8,13 +8,20 @@ interface CategoryPillsProps {
 }
 
 export const CategoryPills: React.FC<CategoryPillsProps> = ({ activeCategory, onSelect }) => {
+  const { categories } = useStore();
+
+  const tabs = [
+    { key: 'all', label: 'All Creations' },
+    ...categories.map((c) => ({ key: c.slug, label: c.label })),
+  ];
+
   return (
     <div
       role="tablist"
-      aria-label="Artwork categories"
+      aria-label="Creation categories"
       className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1"
     >
-      {CATEGORY_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = activeCategory === tab.key;
         return (
           <button
@@ -25,8 +32,8 @@ export const CategoryPills: React.FC<CategoryPillsProps> = ({ activeCategory, on
             onClick={() => onSelect(tab.key)}
             className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-150 border ${
               isActive
-                ? 'bg-[#C86D51] text-white border-[#C86D51] shadow-xs'
-                : 'bg-[#F3EDE2] text-[#2B2623] border-[#EAE3D5] hover:border-[#C86D51]/50 hover:bg-[#EAE3D5]/70'
+                ? 'bg-[#6D1836] text-[#FFF9F5] border-[#6D1836] shadow-xs'
+                : 'bg-[#F8EFEA] text-[#3E2F27] border-[#E7C7CC] hover:border-[#6D1836]/60 hover:bg-[#E7C7CC]/35'
             }`}
           >
             {tab.label}

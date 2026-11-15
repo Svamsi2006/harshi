@@ -40,23 +40,23 @@ export const AdminDiscountsPage: React.FC = () => {
   };
 
   const inputClass =
-    'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]';
+    'w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]';
 
   return (
     <AdminLayout title="Discounts & Studio Coupons">
       <div className="space-y-8 max-w-5xl">
         <form
           onSubmit={handleAddCoupon}
-          className="bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm/40 space-y-4"
+          className="bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm/40 space-y-4"
         >
           <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-[#C86D51]" />
-            <h2 className="font-display text-lg font-medium text-[#2B2623]">Create Promo Code</h2>
+            <Tag className="w-4 h-4 text-[#6D1836]" />
+            <h2 className="font-display text-lg font-medium text-[#3E2F27]">Create Promo Code</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1">Code *</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1">Code *</label>
               <input
                 type="text"
                 required
@@ -67,7 +67,7 @@ export const AdminDiscountsPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1">Type</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1">Type</label>
               <select
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
@@ -78,7 +78,7 @@ export const AdminDiscountsPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1">Value</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1">Value</label>
               <input
                 type="number"
                 min={1}
@@ -88,7 +88,7 @@ export const AdminDiscountsPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1">Min Order (₹)</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1">Min Order (₹)</label>
               <input
                 type="number"
                 min={0}
@@ -98,7 +98,7 @@ export const AdminDiscountsPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6E655F] mb-1">Expires (Opt)</label>
+              <label className="block text-xs font-medium text-[#7A655C] mb-1">Expires (Opt)</label>
               <input
                 type="date"
                 value={expiresAt}
@@ -111,7 +111,7 @@ export const AdminDiscountsPage: React.FC = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Add Coupon</span>
@@ -119,10 +119,10 @@ export const AdminDiscountsPage: React.FC = () => {
           </div>
         </form>
 
-        <div className="bg-white border border-[#EAE3D5] rounded-2xl shadow-warm/40 overflow-hidden">
+        <div className="bg-white border border-[#E7C7CC] rounded-2xl shadow-warm/40 overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#EAE3D5] bg-[#FAF7F2]/50 text-xs text-[#6E655F]">
+              <tr className="border-b border-[#E7C7CC] bg-[#FFF9F5]/50 text-xs text-[#7A655C]">
                 <th className="py-3.5 px-4 font-medium">Promo Code</th>
                 <th className="py-3.5 px-4 font-medium">Discount</th>
                 <th className="py-3.5 px-4 font-medium">Min Order</th>
@@ -130,24 +130,24 @@ export const AdminDiscountsPage: React.FC = () => {
                 <th className="py-3.5 px-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#EAE3D5]">
+            <tbody className="divide-y divide-[#E7C7CC]">
               {coupons.map((c) => (
-                <tr key={c.id} className="hover:bg-[#FAF7F2]/60">
-                  <td className="py-3.5 px-4 font-semibold text-[#2B2623]">{c.code}</td>
+                <tr key={c.id} className="hover:bg-[#FFF9F5]/60">
+                  <td className="py-3.5 px-4 font-semibold text-[#3E2F27]">{c.code}</td>
                   <td className="py-3.5 px-4 tabular-nums">
                     {c.discountType === 'percentage'
                       ? `${c.discountValue}% off`
                       : `${formatINR(c.discountValue)} off`}
                   </td>
-                  <td className="py-3.5 px-4 text-xs text-[#6E655F] tabular-nums">
+                  <td className="py-3.5 px-4 text-xs text-[#7A655C] tabular-nums">
                     {formatINR(c.minimumOrder)}
                   </td>
                   <td className="py-3.5 px-4">
                     <span
                       className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         c.isActive
-                          ? 'bg-[#7A9178]/15 text-[#7A9178]'
-                          : 'bg-[#EAE3D5] text-[#6E655F]'
+                          ? 'bg-[#C9A66B]/15 text-[#C9A66B]'
+                          : 'bg-[#E7C7CC] text-[#7A655C]'
                       }`}
                     >
                       {c.isActive ? 'Active' : 'Paused'}
@@ -158,11 +158,11 @@ export const AdminDiscountsPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => toggleActive(c.id)}
-                        className="p-1.5 text-[#6E655F] hover:text-[#C86D51]"
+                        className="p-1.5 text-[#7A655C] hover:text-[#6D1836]"
                         title={c.isActive ? 'Pause coupon' : 'Activate coupon'}
                       >
                         {c.isActive ? (
-                          <ToggleRight className="w-5 h-5 text-[#7A9178]" />
+                          <ToggleRight className="w-5 h-5 text-[#C9A66B]" />
                         ) : (
                           <ToggleLeft className="w-5 h-5" />
                         )}
@@ -170,7 +170,7 @@ export const AdminDiscountsPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => removeCoupon(c.id)}
-                        className="p-1.5 text-[#6E655F] hover:text-[#B94F45]"
+                        className="p-1.5 text-[#7A655C] hover:text-[#6D1836]"
                         title="Delete coupon"
                       >
                         <Trash2 className="w-4 h-4" />

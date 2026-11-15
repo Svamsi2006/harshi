@@ -41,19 +41,19 @@ export const SearchPage: React.FC = () => {
     <PageTransition className="py-10 sm:py-14">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="max-w-2xl space-y-4">
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#2B2623]">
+          <h1 className="font-display text-3xl sm:text-4xl font-medium text-[#3E2F27]">
             {activeQuery ? `Results for “${activeQuery}”` : 'Search the Studio'}
           </h1>
 
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-[#6E655F] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[#7A655C] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Search sketches, clay, watercolor prints..."
-                className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]"
+                className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]"
               />
               {input && (
                 <button
@@ -62,7 +62,7 @@ export const SearchPage: React.FC = () => {
                     setInput('');
                     setSearchParams({});
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6E655F] hover:text-[#2B2623]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7A655C] hover:text-[#3E2F27]"
                   aria-label="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -71,13 +71,13 @@ export const SearchPage: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-5 py-3 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+              className="px-5 py-3 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
             >
               Search
             </button>
           </form>
 
-          <p className="text-xs text-[#6E655F] tabular-nums">
+          <p className="text-xs text-[#7A655C] tabular-nums">
             Showing {results.length} {results.length === 1 ? 'artwork' : 'artworks'}
           </p>
         </div>

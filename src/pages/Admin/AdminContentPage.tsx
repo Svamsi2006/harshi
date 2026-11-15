@@ -20,33 +20,33 @@ export const AdminContentPage: React.FC = () => {
       <div className="max-w-3xl space-y-6">
         <form
           onSubmit={handleSave}
-          className="bg-white border border-[#EAE3D5] rounded-2xl p-6 sm:p-8 shadow-warm/40 space-y-5"
+          className="bg-white border border-[#E7C7CC] rounded-2xl p-6 sm:p-8 shadow-warm/40 space-y-5"
         >
-          <div className="flex items-center gap-2 pb-3 border-b border-[#EAE3D5]">
-            <FileText className="w-4 h-4 text-[#C86D51]" />
-            <h2 className="font-display text-lg font-medium text-[#2B2623]">
+          <div className="flex items-center gap-2 pb-3 border-b border-[#E7C7CC]">
+            <FileText className="w-4 h-4 text-[#6D1836]" />
+            <h2 className="font-display text-lg font-medium text-[#3E2F27]">
               Top Announcement Strip
             </h2>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#6E655F] mb-1.5">
+            <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
               Announcement Message
             </label>
             <input
               type="text"
               value={announcementText}
               onChange={(e) => setAnnouncementText(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#EAE3D5] text-sm text-[#2B2623] focus:outline-none focus:border-[#C86D51]"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]"
             />
-            <p className="text-xs text-[#6E655F] mt-1.5">
+            <p className="text-xs text-[#7A655C] mt-1.5">
               Displayed across the top of every customer storefront page.
             </p>
           </div>
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C86D51] hover:bg-[#B2593E] text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
           >
             <Save className="w-4 h-4" />
             <span>Save Content Changes</span>

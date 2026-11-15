@@ -24,16 +24,16 @@ export const OrderTracker: React.FC<{ currentStatus: OrderStatus }> = ({ current
                 className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors ${
                   completed
                     ? isCurrent
-                      ? 'bg-[#C86D51] border-[#C86D51] text-white'
-                      : 'bg-[#7A9178] border-[#7A9178] text-white'
-                    : 'bg-[#FAF7F2] border-[#EAE3D5] text-[#6E655F]'
+                      ? 'bg-[#6D1836] border-[#6D1836] text-white'
+                      : 'bg-[#C9A66B] border-[#C9A66B] text-white'
+                    : 'bg-[#FFF9F5] border-[#E7C7CC] text-[#7A655C]'
                 }`}
               >
                 {stage.icon}
               </div>
               <span
                 className={`mt-1.5 text-[11px] sm:text-xs font-medium ${
-                  completed ? 'text-[#2B2623]' : 'text-[#6E655F]'
+                  completed ? 'text-[#3E2F27]' : 'text-[#7A655C]'
                 }`}
               >
                 {stage.label}

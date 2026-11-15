@@ -4,7 +4,6 @@ import {
   DollarSign,
   ShoppingCart,
   Package,
-  Users,
   Clock,
   AlertTriangle,
   ArrowRight,
@@ -17,7 +16,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { ResilientImage } from '../../components/common/ResilientImage';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { allOrders, products } = useStore();
+  const { allOrders, products, categories } = useStore();
 
   const totalRevenue = useMemo(
     () => allOrders.reduce((sum, o) => (o.paymentStatus === 'Paid' ? sum + o.total : sum), 0),
@@ -45,65 +44,65 @@ export const AdminDashboardPage: React.FC = () => {
       <div className="space-y-8">
         {/* KPI Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="bg-white border border-[#EAE3D5] rounded-2xl p-5 shadow-warm/40 space-y-2">
-            <div className="flex items-center justify-between text-[#6E655F]">
+          <div className="bg-white border border-[#E7C7CC] rounded-2xl p-5 shadow-warm/40 space-y-2">
+            <div className="flex items-center justify-between text-[#7A655C]">
               <span className="text-xs font-medium">Total Revenue</span>
-              <div className="w-8 h-8 rounded-xl bg-[#7A9178]/15 text-[#7A9178] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-[#C9A66B]/20 text-[#8C6B3F] flex items-center justify-center">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-[#2B2623] tabular-nums">
+            <p className="text-2xl font-semibold text-[#3E2F27] tabular-nums">
               {formatINR(totalRevenue)}
             </p>
-            <p className="text-xs text-[#7A9178] flex items-center gap-1">
+            <p className="text-xs text-[#8C6B3F] flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+18.4% vs last month</span>
             </p>
           </div>
 
-          <div className="bg-white border border-[#EAE3D5] rounded-2xl p-5 shadow-warm/40 space-y-2">
-            <div className="flex items-center justify-between text-[#6E655F]">
+          <div className="bg-white border border-[#E7C7CC] rounded-2xl p-5 shadow-warm/40 space-y-2">
+            <div className="flex items-center justify-between text-[#7A655C]">
               <span className="text-xs font-medium">Total Orders</span>
-              <div className="w-8 h-8 rounded-xl bg-[#C86D51]/15 text-[#C86D51] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-[#6D1836]/15 text-[#6D1836] flex items-center justify-center">
                 <ShoppingCart className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-[#2B2623] tabular-nums">{totalOrders}</p>
-            <p className="text-xs text-[#6E655F]">Fully synchronized</p>
+            <p className="text-2xl font-semibold text-[#3E2F27] tabular-nums">{totalOrders}</p>
+            <p className="text-xs text-[#7A655C]">Fully synchronized</p>
           </div>
 
-          <div className="bg-white border border-[#EAE3D5] rounded-2xl p-5 shadow-warm/40 space-y-2">
-            <div className="flex items-center justify-between text-[#6E655F]">
-              <span className="text-xs font-medium">Active Products</span>
-              <div className="w-8 h-8 rounded-xl bg-[#E6B86A]/25 text-[#2B2623] flex items-center justify-center">
+          <div className="bg-white border border-[#E7C7CC] rounded-2xl p-5 shadow-warm/40 space-y-2">
+            <div className="flex items-center justify-between text-[#7A655C]">
+              <span className="text-xs font-medium">Active Creations</span>
+              <div className="w-8 h-8 rounded-xl bg-[#E7C7CC]/60 text-[#3E2F27] flex items-center justify-center">
                 <Package className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-[#2B2623] tabular-nums">{products.length}</p>
-            <p className="text-xs text-[#6E655F]">Sketches, Clay &amp; Prints</p>
+            <p className="text-2xl font-semibold text-[#3E2F27] tabular-nums">{products.length}</p>
+            <p className="text-xs text-[#7A655C]">Across {categories.length} categories</p>
           </div>
 
-          <div className="bg-white border border-[#EAE3D5] rounded-2xl p-5 shadow-warm/40 space-y-2">
-            <div className="flex items-center justify-between text-[#6E655F]">
+          <div className="bg-white border border-[#E7C7CC] rounded-2xl p-5 shadow-warm/40 space-y-2">
+            <div className="flex items-center justify-between text-[#7A655C]">
               <span className="text-xs font-medium">Pending Fulfillment</span>
-              <div className="w-8 h-8 rounded-xl bg-[#B94F45]/15 text-[#B94F45] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-[#6D1836]/15 text-[#6D1836] flex items-center justify-center">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-[#2B2623] tabular-nums">{pendingOrders}</p>
-            <p className="text-xs text-[#B94F45] font-medium">Requires packing</p>
+            <p className="text-2xl font-semibold text-[#3E2F27] tabular-nums">{pendingOrders}</p>
+            <p className="text-xs text-[#6D1836] font-medium">Requires packing</p>
           </div>
         </div>
 
         {/* Revenue Chart + Low Stock Alert */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm/40 space-y-4">
+          <div className="lg:col-span-8 bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm/40 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-display text-lg font-medium text-[#2B2623]">Revenue Trend</h2>
-                <p className="text-xs text-[#6E655F]">Successful paid orders over the last 7 days</p>
+                <h2 className="font-display text-lg font-medium text-[#3E2F27]">Revenue Trend</h2>
+                <p className="text-xs text-[#7A655C]">Successful paid orders over the last 7 days</p>
               </div>
-              <span className="text-xs font-semibold text-[#7A9178] bg-[#7A9178]/10 px-3 py-1 rounded-lg">
+              <span className="text-xs font-semibold text-[#8C6B3F] bg-[#C9A66B]/20 px-3 py-1 rounded-lg">
                 Live Data
               </span>
             </div>
@@ -113,24 +112,24 @@ export const AdminDashboardPage: React.FC = () => {
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C86D51" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#C86D51" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#6D1836" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6D1836" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" stroke="#6E655F" fontSize={12} tickLine={false} />
-                  <YAxis stroke="#6E655F" fontSize={12} tickLine={false} />
+                  <XAxis dataKey="date" stroke="#7A655C" fontSize={12} tickLine={false} />
+                  <YAxis stroke="#7A655C" fontSize={12} tickLine={false} />
                   <Tooltip
                     formatter={(value: any) => [formatINR(Number(value)), 'Revenue']}
                     contentStyle={{
-                      backgroundColor: '#FAF7F2',
-                      borderColor: '#EAE3D5',
+                      backgroundColor: '#FFF9F5',
+                      borderColor: '#E7C7CC',
                       borderRadius: '12px',
                     }}
                   />
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#C86D51"
+                    stroke="#6D1836"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorRevenue)"
@@ -140,37 +139,37 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-4 bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm/40 space-y-4">
+          <div className="lg:col-span-4 bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm/40 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-medium text-[#2B2623] inline-flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-[#E6B86A]" />
+              <h2 className="font-display text-lg font-medium text-[#3E2F27] inline-flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-[#C9A66B]" />
                 <span>Low Stock Alerts</span>
               </h2>
-              <span className="text-xs text-[#6E655F] tabular-nums">{lowStockProducts.length} items</span>
+              <span className="text-xs text-[#7A655C] tabular-nums">{lowStockProducts.length} items</span>
             </div>
 
             {lowStockProducts.length === 0 ? (
-              <p className="text-xs text-[#7A9178] py-8 text-center">
+              <p className="text-xs text-[#8C6B3F] py-8 text-center">
                 All catalog inventory levels are healthy ♡
               </p>
             ) : (
-              <ul className="divide-y divide-[#EAE3D5]">
+              <ul className="divide-y divide-[#E7C7CC]/50">
                 {lowStockProducts.map((p) => (
                   <li key={p.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <ResilientImage
                         src={p.images[0]}
                         alt={p.name}
-                        className="w-10 h-10 rounded-lg object-cover border border-[#EAE3D5] shrink-0"
+                        className="w-10 h-10 rounded-lg object-cover border border-[#E7C7CC] shrink-0"
                       />
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#2B2623] truncate">{p.name}</p>
-                        <p className="text-[11px] text-[#B94F45]">Stock: {p.stock} remaining</p>
+                        <p className="text-xs font-medium text-[#3E2F27] truncate">{p.name}</p>
+                        <p className="text-[11px] text-[#6D1836]">Stock: {p.stock} remaining</p>
                       </div>
                     </div>
                     <Link
                       to={`/admin/products/${p.id}/edit`}
-                      className="text-xs font-medium text-[#C86D51] hover:underline shrink-0"
+                      className="text-xs font-medium text-[#6D1836] hover:underline shrink-0"
                     >
                       Update
                     </Link>
@@ -182,15 +181,15 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Recent Orders Table */}
-        <div className="bg-white border border-[#EAE3D5] rounded-2xl p-6 shadow-warm/40 space-y-4">
+        <div className="bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm/40 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-display text-lg font-medium text-[#2B2623]">Recent Orders</h2>
-              <p className="text-xs text-[#6E655F]">Latest customer purchases across the storefront</p>
+              <h2 className="font-display text-lg font-medium text-[#3E2F27]">Recent Orders</h2>
+              <p className="text-xs text-[#7A655C]">Latest customer purchases across the storefront</p>
             </div>
             <Link
               to="/admin/orders"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[#C86D51] hover:text-[#B2593E]"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[#6D1836] hover:text-[#541129]"
             >
               <span>View all orders</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -200,7 +199,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[#EAE3D5] text-xs text-[#6E655F]">
+                <tr className="border-b border-[#E7C7CC]/60 text-xs text-[#7A655C]">
                   <th className="pb-3 font-medium">Order #</th>
                   <th className="pb-3 font-medium">Customer</th>
                   <th className="pb-3 font-medium">Date</th>
@@ -209,23 +208,23 @@ export const AdminDashboardPage: React.FC = () => {
                   <th className="pb-3 font-medium text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EAE3D5]">
+              <tbody className="divide-y divide-[#E7C7CC]/50">
                 {allOrders.slice(0, 5).map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#FAF7F2]/60">
-                    <td className="py-3.5 font-semibold text-[#2B2623]">{ord.orderNumber}</td>
-                    <td className="py-3.5 text-[#6E655F]">{ord.shippingAddress.fullName}</td>
-                    <td className="py-3.5 text-[#6E655F]">{ord.date}</td>
-                    <td className="py-3.5 font-semibold text-[#2B2623] tabular-nums">
+                  <tr key={ord.id} className="hover:bg-[#FFF9F5]">
+                    <td className="py-3.5 font-semibold text-[#3E2F27]">{ord.orderNumber}</td>
+                    <td className="py-3.5 text-[#7A655C]">{ord.shippingAddress.fullName}</td>
+                    <td className="py-3.5 text-[#7A655C]">{ord.date}</td>
+                    <td className="py-3.5 font-semibold text-[#3E2F27] tabular-nums">
                       {formatINR(ord.total)}
                     </td>
                     <td className="py-3.5">
                       <span
                         className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           ord.orderStatus === 'Delivered'
-                            ? 'bg-[#7A9178]/15 text-[#7A9178]'
+                            ? 'bg-[#C9A66B]/25 text-[#3E2F27]'
                             : ord.orderStatus === 'Shipped'
-                              ? 'bg-[#7A9178]/25 text-[#495B47]'
-                              : 'bg-[#E6B86A]/25 text-[#2B2623]'
+                              ? 'bg-[#E7C7CC]/60 text-[#6D1836]'
+                              : 'bg-[#F8EFEA] text-[#3E2F27]'
                         }`}
                       >
                         {ord.orderStatus}
@@ -234,7 +233,7 @@ export const AdminDashboardPage: React.FC = () => {
                     <td className="py-3.5 text-right">
                       <Link
                         to="/admin/orders"
-                        className="text-xs font-medium text-[#C86D51] hover:underline"
+                        className="text-xs font-medium text-[#6D1836] hover:underline"
                       >
                         Manage →
                       </Link>

@@ -6,16 +6,16 @@ import { useStore } from '../../context/StoreContext';
 import { formatINR } from '../../utils/format';
 import { ResilientImage } from '../common/ResilientImage';
 
-const POPULAR_CATEGORIES = [
-  { label: 'Pencil Sketches', to: '/shop/sketches' },
-  { label: 'Terracotta & Clay', to: '/shop/handicrafts' },
-  { label: 'Original Paintings', to: '/shop/paintings' },
-  { label: 'Watercolor Prints', to: '/shop/prints' },
-];
-
 export const SearchOverlay: React.FC = () => {
-  const { products, isSearchOpen, closeSearch, recentSearches, addRecentSearch, clearRecentSearches } =
-    useStore();
+  const {
+    products,
+    categories,
+    isSearchOpen,
+    closeSearch,
+    recentSearches,
+    addRecentSearch,
+    clearRecentSearches,
+  } = useStore();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -40,13 +40,15 @@ export const SearchOverlay: React.FC = () => {
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.subtitle.toLowerCase().includes(q) ||
-        p.categoryLabel.toLowerCase().includes(q) ||
-        p.medium.toLowerCase().includes(q)
-    ).slice(0, 5);
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.subtitle.toLowerCase().includes(q) ||
+          p.categoryLabel.toLowerCase().includes(q) ||
+          p.medium.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
   }, [products, query]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,7 +81,7 @@ export const SearchOverlay: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-[#2B2623]/35 backdrop-blur-sm"
+            className="fixed inset-0 bg-[#3E2F27]/35 backdrop-blur-sm"
             onClick={closeSearch}
             aria-hidden="true"
           />
@@ -91,28 +93,28 @@ export const SearchOverlay: React.FC = () => {
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             role="dialog"
             aria-modal="true"
-            aria-label="Search studio artworks"
-            className="relative w-full max-w-2xl bg-[#FAF7F2] border border-[#EAE3D5] rounded-2xl shadow-warm overflow-hidden"
+            aria-label="Search handmade creations"
+            className="relative w-full max-w-2xl bg-[#FFF9F5] border border-[#E7C7CC] rounded-2xl shadow-warm overflow-hidden"
           >
             <form
               onSubmit={handleSubmit}
-              className="flex items-center gap-3 px-5 py-4 bg-white border-b border-[#EAE3D5]"
+              className="flex items-center gap-3 px-5 py-4 bg-white border-b border-[#E7C7CC]/70"
             >
-              <Search className="w-5 h-5 text-[#C86D51] shrink-0" />
+              <Search className="w-5 h-5 text-[#6D1836] shrink-0" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search sketches, terracotta idols, watercolor prints..."
-                className="flex-1 bg-transparent text-[#2B2623] placeholder:text-[#6E655F]/75 text-sm sm:text-base focus:outline-none"
+                placeholder="Search resin keepsakes, pipe cleaner bouquets, LED frames, portraits..."
+                className="flex-1 bg-transparent text-[#3E2F27] placeholder:text-[#7A655C]/75 text-sm sm:text-base focus:outline-none"
                 aria-label="Search query"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  className="text-xs font-medium text-[#6E655F] hover:text-[#2B2623] px-2 py-1 rounded-md"
+                  className="text-xs font-medium text-[#7A655C] hover:text-[#3E2F27] px-2 py-1 rounded-md"
                 >
                   Clear
                 </button>
@@ -120,7 +122,7 @@ export const SearchOverlay: React.FC = () => {
               <button
                 type="button"
                 onClick={closeSearch}
-                className="p-1.5 text-[#6E655F] hover:text-[#2B2623] rounded-lg"
+                className="p-1.5 text-[#7A655C] hover:text-[#3E2F27] rounded-lg"
                 aria-label="Close search"
               >
                 <X className="w-4 h-4" />
@@ -132,40 +134,40 @@ export const SearchOverlay: React.FC = () => {
                 suggestions.length > 0 ? (
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-medium text-[#6E655F]">
-                        Matching works ({suggestions.length})
+                      <p className="text-xs font-medium text-[#7A655C]">
+                        Matching creations ({suggestions.length})
                       </p>
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        className="text-xs font-medium text-[#C86D51] hover:text-[#B2593E] inline-flex items-center gap-1"
+                        className="text-xs font-medium text-[#6D1836] hover:text-[#541129] inline-flex items-center gap-1"
                       >
                         <span>View all results</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <ul className="divide-y divide-[#EAE3D5]">
+                    <ul className="divide-y divide-[#E7C7CC]/50">
                       {suggestions.map((item) => (
                         <li key={item.id}>
                           <button
                             type="button"
                             onClick={() => handlePickProduct(item.slug, item.name)}
-                            className="w-full flex items-center gap-4 py-2.5 px-2 -mx-2 rounded-xl hover:bg-[#F3EDE2]/70 transition-colors text-left"
+                            className="w-full flex items-center gap-4 py-2.5 px-2 -mx-2 rounded-xl hover:bg-[#F8EFEA] transition-colors text-left"
                           >
                             <ResilientImage
                               src={item.images[0]}
                               alt={item.name}
-                              className="w-12 h-12 rounded-lg object-cover shrink-0 border border-[#EAE3D5]"
+                              className="w-12 h-12 rounded-lg object-cover shrink-0 border border-[#E7C7CC]"
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-[#2B2623] truncate">
+                              <p className="text-sm font-medium text-[#3E2F27] truncate">
                                 {item.name}
                               </p>
-                              <p className="text-xs text-[#6E655F] truncate">
+                              <p className="text-xs text-[#7A655C] truncate">
                                 {item.medium} · {item.dimensions}
                               </p>
                             </div>
-                            <span className="text-sm font-semibold text-[#2B2623] tabular-nums shrink-0">
+                            <span className="text-sm font-semibold text-[#3E2F27] tabular-nums shrink-0">
                               {formatINR(item.price)}
                             </span>
                           </button>
@@ -175,11 +177,11 @@ export const SearchOverlay: React.FC = () => {
                   </div>
                 ) : (
                   <div className="py-8 text-center">
-                    <p className="font-display text-lg text-[#2B2623]">
-                      No artworks matched &ldquo;{query}&rdquo;
+                    <p className="font-display text-lg text-[#3E2F27]">
+                      No creations matched &ldquo;{query}&rdquo;
                     </p>
-                    <p className="text-sm text-[#6E655F] mt-1">
-                      Try searching for charcoal, terracotta, ganesha, or watercolor.
+                    <p className="text-sm text-[#7A655C] mt-1">
+                      Try searching for resin, LED frame, embroidery, keychain, or portrait.
                     </p>
                   </div>
                 )
@@ -188,11 +190,11 @@ export const SearchOverlay: React.FC = () => {
                   {recentSearches.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2.5">
-                        <p className="text-xs font-medium text-[#6E655F]">Recent searches</p>
+                        <p className="text-xs font-medium text-[#7A655C]">Recent searches</p>
                         <button
                           type="button"
                           onClick={clearRecentSearches}
-                          className="text-xs text-[#6E655F] hover:text-[#C86D51] transition-colors"
+                          className="text-xs text-[#7A655C] hover:text-[#6D1836] transition-colors"
                         >
                           Clear history
                         </button>
@@ -203,9 +205,9 @@ export const SearchOverlay: React.FC = () => {
                             key={term}
                             type="button"
                             onClick={() => handlePickRecent(term)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#EAE3D5] text-xs font-medium text-[#2B2623] hover:border-[#C86D51] transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E7C7CC] text-xs font-medium text-[#3E2F27] hover:border-[#6D1836] transition-colors"
                           >
-                            <Clock className="w-3 h-3 text-[#6E655F]" />
+                            <Clock className="w-3 h-3 text-[#7A655C]" />
                             <span>{term}</span>
                           </button>
                         ))}
@@ -214,22 +216,22 @@ export const SearchOverlay: React.FC = () => {
                   )}
 
                   <div>
-                    <p className="text-xs font-medium text-[#6E655F] mb-2.5">
-                      Explore by craft & medium
+                    <p className="text-xs font-medium text-[#7A655C] mb-2.5">
+                      Explore by craft category
                     </p>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {POPULAR_CATEGORIES.map((cat) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {categories.map((cat) => (
                         <button
-                          key={cat.to}
+                          key={cat.id}
                           type="button"
                           onClick={() => {
                             closeSearch();
-                            navigate(cat.to);
+                            navigate(`/shop/category/${cat.slug}`);
                           }}
-                          className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-[#EAE3D5] text-sm font-medium text-[#2B2623] hover:border-[#C86D51] hover:text-[#C86D51] transition-colors text-left"
+                          className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-[#E7C7CC] text-sm font-medium text-[#3E2F27] hover:border-[#6D1836] hover:text-[#6D1836] transition-colors text-left"
                         >
-                          <span>{cat.label}</span>
-                          <ArrowRight className="w-4 h-4 opacity-50" />
+                          <span className="truncate pr-2">{cat.label}</span>
+                          <ArrowRight className="w-4 h-4 opacity-50 shrink-0" />
                         </button>
                       ))}
                     </div>

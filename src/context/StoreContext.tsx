@@ -4,6 +4,7 @@ import type {
   CartHistoryAction,
   CartHistoryEntry,
   CartItem,
+  CategoryItem,
   CommissionRequest,
   Coupon,
   CustomerUser,
@@ -16,6 +17,7 @@ import type {
 } from '../types';
 import { DEMO_CUSTOMER, DEMO_OWNER, storeService } from '../services/storeService';
 import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
+import { STUDIO_MEDIA } from '../data/studioImages';
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '../utils/format';
 
 export interface SupabaseSyncStatus {
@@ -28,6 +30,7 @@ export interface SupabaseSyncStatus {
 interface StoreContextValue {
   user: CustomerUser | null;
   isAdmin: boolean;
+  categories: CategoryItem[];
   products: Product[];
   cart: CartItem[];
   cartCount: number;
@@ -71,15 +74,54 @@ interface StoreContextValue {
   updateProfile: (data: { fullName: string; email: string; phone: string }) => void;
   logout: () => void;
 
-  addProduct: (data: Omit<Product, 'id' | 'createdAt'>) => Product;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (id: string) => void;
-  duplicateProduct: (id: string) => Product | null;
+  addCategory: (input: { label: string; subtitle?: string }) => CategoryItem;
+  deleteCategory: (idOrSlug: string) => void;
+
+  addProduct: (
+    data: Omit<Product, 'id' | 'createdAt'>
+  ) => Promise<{ ok: boolean; product: Product; synced?: boolean; error?: string }>;
+  updateProduct: (product: Product) => Promise<{ ok: boolean; synced?: boolean; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ ok: boolean; synced?: boolean; error?: string }>;
+  duplicateProduct: (id: string) => Promise<Product | null>;
 
   updateOrderStatus: (orderId: string, status: OrderStatus, trackingCode?: string) => void;
-  updateCommissionStatus: (id: string, status: CommissionRequest['status'], quotedPrice?: number, internalNotes?: string) => void;
+
+  createCustomOrderRequest: (
+    req: Omit<
+      CommissionRequest,
+      'id' | 'submittedAt' | 'status' | 'adminApproved' | 'customerApproved' | 'orderCreated'
+    >
+  ) => CommissionRequest;
+  updateCommissionStatus: (
+    id: string,
+    status: CommissionRequest['status'],
+    quotedPrice?: number,
+    internalNotes?: string
+  ) => void;
+  approveCustomOrderByAdmin: (id: string, quotedPrice?: number, internalNotes?: string) => void;
+  approveCustomOrderByCustomerAndCreateOrder: (
+    id: string,
+    checkoutInput?: {
+      shippingAddress: Omit<Address, 'id' | 'isDefault'>;
+      customerEmail: string;
+      customerName?: string;
+      paymentMethod: PaymentMethod;
+      paymentReference?: string;
+    }
+  ) => Order | null;
+  createContinuousOrderFromCustomRequest: (
+    id: string,
+    checkoutInput?: {
+      shippingAddress: Omit<Address, 'id' | 'isDefault'>;
+      customerEmail: string;
+      customerName?: string;
+      paymentMethod: PaymentMethod;
+      paymentReference?: string;
+    }
+  ) => Order | null;
+
   saveCoupons: (coupons: Coupon[]) => void;
-  saveStoreSettings: (settings: StoreSettings) => void;
+  saveStoreSettings: (settings: StoreSettings & { openrouterApiKey?: string }) => Promise<void>;
 
   addToCart: (productId: string, quantity?: number, openDrawer?: boolean) => boolean;
   updateCartQuantity: (productId: string, quantity: number) => void;
@@ -98,6 +140,9 @@ interface StoreContextValue {
   placeOrder: (params: {
     shippingAddress: Omit<Address, 'id' | 'isDefault'>;
     paymentMethod: PaymentMethod;
+    customerEmail?: string;
+    customerName?: string;
+    paymentReference?: string;
     discount?: number;
   }) => Order;
 
@@ -112,6 +157,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const userId = user?.id ?? null;
   const isAdmin = user?.role === 'owner';
 
+  const [categories, setCategories] = useState<CategoryItem[]>(() => storeService.getCategories());
   const [products, setProducts] = useState<Product[]>(() => storeService.getProducts());
   const [cart, setCart] = useState<CartItem[]>(() => storeService.getCart(userId));
   const [wishlist, setWishlist] = useState<string[]>(() => storeService.getWishlist(userId));
@@ -120,9 +166,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
   const [addresses, setAddresses] = useState<Address[]>(() => storeService.getAddresses(userId));
   const [allOrders, setAllOrders] = useState<Order[]>(() => storeService.getAllOrders());
-  const [commissions, setCommissions] = useState<CommissionRequest[]>(() => storeService.getCommissions());
+  const [commissions, setCommissions] = useState<CommissionRequest[]>(() =>
+    storeService.getCommissions()
+  );
   const [coupons, setCoupons] = useState<Coupon[]>(() => storeService.getCoupons());
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => storeService.getStoreSettings());
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() =>
+    storeService.getStoreSettings()
+  );
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     storeService.getRecentSearches()
   );
@@ -157,6 +207,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const boot = await bootRes.json();
       if (!boot.synced) return;
 
+      if (Array.isArray(boot.categories) && boot.categories.length > 0) {
+        storeService.saveCategories(boot.categories);
+        setCategories(boot.categories);
+      }
       if (Array.isArray(boot.products) && boot.products.length > 0) {
         storeService.saveProducts(boot.products);
         setProducts(boot.products);
@@ -167,7 +221,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           body: JSON.stringify({ products: storeService.getProducts() || DEFAULT_PRODUCTS }),
         });
       }
-
       if (Array.isArray(boot.orders) && boot.orders.length > 0) {
         storeService.saveAllOrders(boot.orders);
         setAllOrders(boot.orders);
@@ -467,57 +520,156 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addToast('Signed out', 'See you again soon at the studio.', 'info');
   }, [addToast]);
 
-  // Admin Product Management (Local + Supabase Sync)
-  const addProduct = useCallback(
-    (data: Omit<Product, 'id' | 'createdAt'>) => {
-      const created = storeService.addProduct(data);
-      setProducts(storeService.getProducts());
-      void fetch('/api/products', {
+  // Dynamic Categories Management
+  const addCategory = useCallback(
+    (input: { label: string; subtitle?: string }) => {
+      const created = storeService.addCategory(input);
+      setCategories(storeService.getCategories());
+      void fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(created),
       }).catch(() => {});
-      addToast('Product added successfully', created.name, 'success');
+      addToast('Category added', created.label, 'success');
       return created;
     },
     [addToast]
   );
 
+  const deleteCategory = useCallback(
+    (idOrSlug: string) => {
+      const cat = categories.find((c) => c.id === idOrSlug || c.slug === idOrSlug);
+      storeService.deleteCategory(idOrSlug);
+      setCategories(storeService.getCategories());
+      void fetch(`/api/categories/${encodeURIComponent(idOrSlug)}`, {
+        method: 'DELETE',
+      }).catch(() => {});
+      addToast('Category removed', cat?.label ?? idOrSlug, 'info');
+    },
+    [addToast, categories]
+  );
+
+  // Admin Product Management
+  const addProduct = useCallback(
+    async (
+      data: Omit<Product, 'id' | 'createdAt'>
+    ): Promise<{ ok: boolean; product: Product; synced?: boolean; error?: string }> => {
+      const created = storeService.addProduct(data);
+      setProducts(storeService.getProducts());
+
+      try {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(created),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          addToast(
+            'Product saved locally',
+            json.error || 'Run Supabase SQL tables to sync remotely.',
+            'info'
+          );
+          return { ok: true, product: created, synced: false, error: json.error };
+        }
+        if (json.synced && json.product) {
+          storeService.updateProduct(json.product);
+          setProducts(storeService.getProducts());
+          addToast('Product added & synced to Supabase', json.product.name, 'success');
+          return { ok: true, product: json.product, synced: true };
+        }
+      } catch {
+        // Offline / local fallback
+      }
+
+      addToast('Product added successfully', created.name, 'success');
+      return { ok: true, product: created, synced: false };
+    },
+    [addToast]
+  );
+
   const updateProduct = useCallback(
-    (product: Product) => {
+    async (product: Product): Promise<{ ok: boolean; synced?: boolean; error?: string }> => {
       storeService.updateProduct(product);
       setProducts(storeService.getProducts());
-      void fetch(`/api/products/${encodeURIComponent(product.id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
-      }).catch(() => {});
+
+      try {
+        const res = await fetch(`/api/products/${encodeURIComponent(product.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(product),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          addToast(
+            'Updated locally — Supabase sync issue',
+            json.error || `HTTP ${res.status}`,
+            'error'
+          );
+          return { ok: true, synced: false, error: json.error || `HTTP ${res.status}` };
+        }
+        if (json.synced && json.product) {
+          storeService.updateProduct(json.product);
+          setProducts(storeService.getProducts());
+          addToast('Product updated in Supabase', json.product.name, 'success');
+          return { ok: true, synced: true };
+        }
+      } catch {
+        // Offline / local fallback
+      }
+
       addToast('Product updated', product.name, 'success');
+      return { ok: true, synced: false };
     },
     [addToast]
   );
 
   const deleteProduct = useCallback(
-    (id: string) => {
+    async (id: string): Promise<{ ok: boolean; synced?: boolean; error?: string }> => {
       const p = products.find((x) => x.id === id);
       storeService.deleteProduct(id);
       setProducts(storeService.getProducts());
-      void fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
-      addToast('Product removed', p?.name ?? id, 'info');
+
+      try {
+        const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.error) {
+          addToast(
+            'Removed locally — Supabase sync notice',
+            json.error || `HTTP ${res.status}`,
+            'error'
+          );
+          return { ok: true, synced: false, error: json.error || `HTTP ${res.status}` };
+        }
+        addToast('Product removed', p?.name ?? id, 'info');
+        return { ok: true, synced: Boolean(json.synced) };
+      } catch {
+        addToast('Product removed', p?.name ?? id, 'info');
+        return { ok: true, synced: false };
+      }
     },
     [addToast, products]
   );
 
   const duplicateProduct = useCallback(
-    (id: string) => {
+    async (id: string): Promise<Product | null> => {
       const dup = storeService.duplicateProduct(id);
       if (dup) {
         setProducts(storeService.getProducts());
-        void fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dup),
-        }).catch(() => {});
+        try {
+          const res = await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dup),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (json.synced && json.product) {
+            storeService.updateProduct(json.product);
+            setProducts(storeService.getProducts());
+          }
+        } catch {
+          // ignore
+        }
         addToast('Product duplicated', dup.name, 'success');
       }
       return dup;
@@ -539,18 +691,278 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [addToast]
   );
 
+  // Custom Orders Workflow (Waiting List -> Admin Approval -> Customer Approval -> Continuous Order Created)
+  const createCustomOrderRequest = useCallback(
+    (
+      req: Omit<
+        CommissionRequest,
+        'id' | 'submittedAt' | 'status' | 'adminApproved' | 'customerApproved' | 'orderCreated'
+      >
+    ) => {
+      const created: CommissionRequest = {
+        ...req,
+        id: `CUST-${Math.floor(1000 + Math.random() * 8999)}`,
+        customerId: req.customerId ?? userId ?? 'guest',
+        status: 'Waiting List',
+        adminApproved: false,
+        customerApproved: false,
+        orderCreated: false,
+        submittedAt: new Date().toISOString(),
+      };
+      storeService.saveCommissionRequest(created);
+      setCommissions(storeService.getCommissions());
+      void fetch('/api/commissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(created),
+      }).catch(() => {});
+      addToast('Added to Custom Order Waiting List', `Request ${created.id} submitted`, 'success');
+      return created;
+    },
+    [addToast, userId]
+  );
+
   const updateCommissionStatus = useCallback(
-    (id: string, status: CommissionRequest['status'], quotedPrice?: number, internalNotes?: string) => {
+    (
+      id: string,
+      status: CommissionRequest['status'],
+      quotedPrice?: number,
+      internalNotes?: string
+    ) => {
       storeService.updateCommissionStatus(id, status, quotedPrice, internalNotes);
       setCommissions(storeService.getCommissions());
-      void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, quotedPrice, internalNotes }),
-      }).catch(() => {});
-      addToast('Commission updated', `Request ${id} status: ${status}`, 'success');
+      const updated = storeService.getCommissions().find((c) => c.id === id);
+      if (updated) {
+        void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        }).catch(() => {});
+      }
+      addToast('Custom order updated', `Request ${id}: ${status}`, 'success');
     },
     [addToast]
+  );
+
+  const approveCustomOrderByAdmin = useCallback(
+    (id: string, quotedPrice?: number, internalNotes?: string) => {
+      const existing = commissions.find((c) => c.id === id);
+      if (!existing) return;
+      const finalQuote = quotedPrice ?? existing.quotedPrice ?? existing.predictedPrice ?? 1499;
+      const updated: CommissionRequest = {
+        ...existing,
+        adminApproved: true,
+        status: 'Admin Approved',
+        quotedPrice: finalQuote,
+        internalNotes: internalNotes ?? existing.internalNotes,
+      };
+      storeService.updateCommission(updated);
+      setCommissions(storeService.getCommissions());
+      void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      }).catch(() => {});
+      addToast('Custom order approved by Admin', `${id} ready for customer confirmation`, 'success');
+    },
+    [addToast, commissions]
+  );
+
+  const buildOrderFromCustomRequest = useCallback(
+    (
+      req: CommissionRequest,
+      checkoutInput?: {
+        shippingAddress: Omit<Address, 'id' | 'isDefault'>;
+        customerEmail: string;
+        customerName?: string;
+        paymentMethod: PaymentMethod;
+        paymentReference?: string;
+      }
+    ): Order | null => {
+      const addr = checkoutInput?.shippingAddress;
+      const email = (checkoutInput?.customerEmail || req.email || '').trim();
+      const name = (checkoutInput?.customerName || addr?.fullName || req.customerName || '').trim();
+      if (
+        !addr ||
+        !addr.fullName.trim() ||
+        !addr.phone.trim() ||
+        !addr.addressLine.trim() ||
+        !addr.city.trim() ||
+        !addr.state.trim() ||
+        !addr.postalCode.trim() ||
+        !email
+      ) {
+        return null;
+      }
+
+      const num = Math.floor(2100 + Math.random() * 7800);
+      const price = req.quotedPrice ?? req.predictedPrice ?? 1499;
+      const fee = price >= storeSettings.freeShippingThreshold ? 0 : storeSettings.defaultShippingFee;
+      const estDate = new Date();
+      estDate.setDate(estDate.getDate() + 8);
+      const estimatedDelivery = new Intl.DateTimeFormat('en-IN', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(estDate);
+
+      return {
+        id: `ord-custom-${Date.now()}`,
+        orderNumber: `VA-CUST-${num}`,
+        customerId: req.customerId ?? userId ?? 'guest',
+        customerName: name,
+        customerEmail: email,
+        date: new Date().toISOString().split('T')[0],
+        items: [
+          {
+            productId: req.id,
+            name: `Custom: ${req.customIdea || req.categoryLabel}`,
+            slug: 'custom-orders',
+            image: req.referenceImageData || STUDIO_MEDIA.artPortraitKeepsake,
+            price,
+            quantity: 1,
+          },
+        ],
+        subtotal: price,
+        shippingFee: fee,
+        discount: 0,
+        total: price + fee,
+        paymentMethod: checkoutInput?.paymentMethod ?? 'razorpay',
+        paymentStatus: 'Paid',
+        orderStatus: 'Confirmed',
+        shippingAddress: {
+          fullName: addr.fullName.trim(),
+          phone: addr.phone.trim(),
+          addressLine: addr.addressLine.trim(),
+          city: addr.city.trim(),
+          state: addr.state.trim(),
+          postalCode: addr.postalCode.trim(),
+          country: addr.country.trim() || 'India',
+        },
+        trackingCode: `VA-CUST-${num}`,
+        courierName: 'Blue Dart Express',
+        estimatedDelivery,
+        isCustomOrder: true,
+        customRequestId: req.id,
+        paymentReference: checkoutInput?.paymentReference ?? `PAY-${num}`,
+      };
+    },
+    [storeSettings.defaultShippingFee, storeSettings.freeShippingThreshold, userId]
+  );
+
+  const approveCustomOrderByCustomerAndCreateOrder = useCallback(
+    (
+      id: string,
+      checkoutInput?: {
+        shippingAddress: Omit<Address, 'id' | 'isDefault'>;
+        customerEmail: string;
+        customerName?: string;
+        paymentMethod: PaymentMethod;
+        paymentReference?: string;
+      }
+    ): Order | null => {
+      const existing = commissions.find((c) => c.id === id);
+      if (!existing) return null;
+      if (existing.orderCreated && existing.linkedOrderId) {
+        return allOrders.find((o) => o.id === existing.linkedOrderId) ?? null;
+      }
+
+      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput);
+      if (!newOrder) {
+        addToast(
+          'Complete shipping & payment details required',
+          'Please fill out your full delivery address, email, phone, and payment method.',
+          'error'
+        );
+        return null;
+      }
+
+      storeService.saveUserOrder(newOrder);
+      setAllOrders(storeService.getAllOrders());
+
+      const updatedReq: CommissionRequest = {
+        ...existing,
+        customerApproved: true,
+        orderCreated: true,
+        linkedOrderId: newOrder.id,
+        status: 'Order Created',
+      };
+      storeService.updateCommission(updatedReq);
+      setCommissions(storeService.getCommissions());
+
+      void fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      }).catch(() => {});
+      void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReq),
+      }).catch(() => {});
+
+      addToast('Custom Order Confirmed & Created', `Continuous Order ${newOrder.orderNumber}`, 'success');
+      return newOrder;
+    },
+    [addToast, allOrders, buildOrderFromCustomRequest, commissions]
+  );
+
+  const createContinuousOrderFromCustomRequest = useCallback(
+    (
+      id: string,
+      checkoutInput?: {
+        shippingAddress: Omit<Address, 'id' | 'isDefault'>;
+        customerEmail: string;
+        customerName?: string;
+        paymentMethod: PaymentMethod;
+        paymentReference?: string;
+      }
+    ): Order | null => {
+      const existing = commissions.find((c) => c.id === id);
+      if (!existing) return null;
+      if (existing.orderCreated && existing.linkedOrderId) {
+        return allOrders.find((o) => o.id === existing.linkedOrderId) ?? null;
+      }
+
+      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput);
+      if (!newOrder) {
+        addToast(
+          'Customer delivery address required',
+          'Enter complete shipping address, phone, email & payment method before placing the order.',
+          'error'
+        );
+        return null;
+      }
+
+      storeService.saveUserOrder(newOrder);
+      setAllOrders(storeService.getAllOrders());
+
+      const updatedReq: CommissionRequest = {
+        ...existing,
+        adminApproved: true,
+        customerApproved: true,
+        orderCreated: true,
+        linkedOrderId: newOrder.id,
+        status: 'Order Created',
+      };
+      storeService.updateCommission(updatedReq);
+      setCommissions(storeService.getCommissions());
+
+      void fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder),
+      }).catch(() => {});
+      void fetch(`/api/commissions/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedReq),
+      }).catch(() => {});
+
+      addToast('Continuous Order Placed', `Created ${newOrder.orderNumber}`, 'success');
+      return newOrder;
+    },
+    [addToast, allOrders, buildOrderFromCustomRequest, commissions]
   );
 
   const saveCoupons = useCallback(
@@ -568,14 +980,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const saveStoreSettings = useCallback(
-    (settings: StoreSettings) => {
-      storeService.saveStoreSettings(settings);
-      setStoreSettings(settings);
-      void fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      }).catch(() => {});
+    async (settings: StoreSettings & { openrouterApiKey?: string }): Promise<void> => {
+      const { openrouterApiKey, ...safeClientSettings } = settings;
+      storeService.saveStoreSettings(safeClientSettings);
+      setStoreSettings(safeClientSettings);
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          const merged: StoreSettings = {
+            ...safeClientSettings,
+            hasOpenrouterKey:
+              json.hasOpenrouterKey !== undefined
+                ? Boolean(json.hasOpenrouterKey)
+                : safeClientSettings.hasOpenrouterKey,
+            openrouterKeyMasked:
+              json.openrouterKeyMasked !== undefined
+                ? json.openrouterKeyMasked
+                : safeClientSettings.openrouterKeyMasked,
+            logoUrl: json.logoUrl !== undefined ? json.logoUrl : safeClientSettings.logoUrl,
+          };
+          storeService.saveStoreSettings(merged);
+          setStoreSettings(merged);
+          if (openrouterApiKey && openrouterApiKey !== '__CLEAR__') {
+            addToast('Studio settings & OpenRouter key saved', undefined, 'success');
+            return;
+          }
+        } else if (json?.error) {
+          addToast('Settings saved locally — sync notice', json.error, 'info');
+          return;
+        }
+      } catch {
+        // Offline / local fallback
+      }
       addToast('Store settings saved', undefined, 'success');
     },
     [addToast]
@@ -661,10 +1103,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ({
       shippingAddress,
       paymentMethod,
+      customerEmail,
+      customerName,
+      paymentReference,
       discount = 0,
     }: {
       shippingAddress: Omit<Address, 'id' | 'isDefault'>;
       paymentMethod: PaymentMethod;
+      customerEmail?: string;
+      customerName?: string;
+      paymentReference?: string;
       discount?: number;
     }): Order => {
       const orderItems = cart
@@ -699,8 +1147,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         id: `ord-${Date.now()}`,
         orderNumber: `VA-2026-${num}`,
         customerId: userId ?? 'guest',
-        customerName: user?.fullName ?? shippingAddress.fullName,
-        customerEmail: user?.email ?? 'customer@example.com',
+        customerName: customerName ?? user?.fullName ?? shippingAddress.fullName,
+        customerEmail: customerEmail ?? user?.email ?? 'customer@example.com',
         date: new Date().toISOString().split('T')[0],
         items: orderItems,
         subtotal,
@@ -714,13 +1162,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         trackingCode: `VA-TRK-${num}`,
         courierName: 'Blue Dart Express',
         estimatedDelivery,
+        paymentReference: paymentReference ?? `PAY-${num}`,
       };
 
       orderItems.forEach((item) => {
         recordCartHistory(item.productId, item.quantity, 'checked_out');
       });
 
-      storeService.saveUserOrder(newOrder, userId);
+      storeService.saveUserOrder(newOrder);
       setAllOrders(storeService.getAllOrders());
       void fetch('/api/orders', {
         method: 'POST',
@@ -753,15 +1202,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const orders = useMemo(() => {
-    if (!userId) return [];
-    return allOrders.filter((o) => o.customerId === userId);
-  }, [allOrders, userId]);
+    if (!userId && !user?.email) return [];
+    const emailLower = user?.email?.toLowerCase();
+    return allOrders.filter(
+      (o) =>
+        (userId && o.customerId === userId) ||
+        (emailLower && o.customerEmail?.toLowerCase() === emailLower)
+    );
+  }, [allOrders, user?.email, userId]);
 
   return (
     <StoreContext.Provider
       value={{
         user,
         isAdmin,
+        categories,
         products,
         cart,
         cartCount,
@@ -794,12 +1249,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         registerCustomer,
         updateProfile,
         logout,
+        addCategory,
+        deleteCategory,
         addProduct,
         updateProduct,
         deleteProduct,
         duplicateProduct,
         updateOrderStatus,
+        createCustomOrderRequest,
         updateCommissionStatus,
+        approveCustomOrderByAdmin,
+        approveCustomOrderByCustomerAndCreateOrder,
+        createContinuousOrderFromCustomRequest,
         saveCoupons,
         saveStoreSettings,
         addToCart,

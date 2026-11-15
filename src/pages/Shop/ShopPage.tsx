@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import type { FilterState, RouteCategorySlug } from '../../types';
+import { Link, useParams } from 'react-router-dom';
+import type { FilterState } from '../../types';
+import { useStore } from '../../context/StoreContext';
 import { useFilteredProducts } from '../../hooks/useFilteredProducts';
 import { PageTransition } from '../../components/common/PageTransition';
 import { CategoryPills } from '../../components/product/CategoryPills';
@@ -8,41 +9,14 @@ import { FilterBar } from '../../components/product/FilterBar';
 import { ProductGrid } from '../../components/product/ProductGrid';
 
 interface ShopPageProps {
-  routeGroup?: RouteCategorySlug;
+  routeGroup?: string;
 }
 
-const COLLECTION_COPY: Record<
-  'all' | RouteCategorySlug,
-  { title: string; subtitle: string; note: string }
-> = {
-  all: {
-    title: 'Complete Studio Collection',
-    subtitle: 'Original sketches, clay sculptures, paintings & archival prints',
-    note: 'Every piece is made in small batches or as a singular 1-of-1 artwork.',
-  },
-  sketches: {
-    title: 'Pencil & Charcoal Sketches',
-    subtitle: 'Original graphite, charcoal, and sanguine drawings on cotton rag',
-    note: 'Signed, fixed with archival matte spray, and packed flat between rigid boards.',
-  },
-  handicrafts: {
-    title: 'Handicrafts, Clay & Woven',
-    subtitle: 'Raw riverbank terracotta, hand-carved sheesham wood, and natural jute',
-    note: 'Tactile objects shaped slowly without industrial molds.',
-  },
-  paintings: {
-    title: 'Original Paintings',
-    subtitle: 'One-of-a-kind oil, acrylic, and gouache works on linen & birch panel',
-    note: 'Delivered ready to display with signed certificate of originality.',
-  },
-  prints: {
-    title: 'Watercolor Art Prints',
-    subtitle: 'Museum-grade archival giclee editions on 310 GSM cotton paper',
-    note: 'Deckle-edged prints stamped and numbered by our studio.',
-  },
-};
-
 export const ShopPage: React.FC<ShopPageProps> = ({ routeGroup }) => {
+  const { slug } = useParams<{ slug?: string }>();
+  const activeRouteSlug = slug ?? routeGroup;
+  const { categories } = useStore();
+
   const [filters, setFilters] = useState<FilterState>({
     category: 'all',
     priceRange: 'all',
@@ -53,10 +27,20 @@ export const ShopPage: React.FC<ShopPageProps> = ({ routeGroup }) => {
 
   useEffect(() => {
     setFilters((prev) => ({ ...prev, category: 'all' }));
-  }, [routeGroup]);
+  }, [activeRouteSlug]);
 
-  const products = useFilteredProducts(filters, routeGroup);
-  const copy = COLLECTION_COPY[routeGroup ?? 'all'];
+  const products = useFilteredProducts(filters, activeRouteSlug);
+  const matchedCat = activeRouteSlug
+    ? categories.find((c) => c.slug === activeRouteSlug)
+    : undefined;
+
+  const title = matchedCat ? matchedCat.label : 'Shop All Works';
+  const subtitle = matchedCat
+    ? matchedCat.subtitle
+    : 'Resin keepsakes, clay & pipe cleaner florals, LED frames, paper keepsakes, textile embroidery, personalized accessories, and art & portraits.';
+  const note = matchedCat
+    ? 'Handmade • Heartmade • Heartfelt — crafted in small studio batches.'
+    : 'Crafted with thought, gifted with heart.';
 
   const resetFilters = () =>
     setFilters({
@@ -72,35 +56,33 @@ export const ShopPage: React.FC<ShopPageProps> = ({ routeGroup }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Breadcrumb & Header */}
         <div className="space-y-3">
-          <nav aria-label="Breadcrumb" className="text-xs text-[#6E655F] flex items-center gap-2">
-            <Link to="/" className="hover:text-[#C86D51]">
-              Home
+          <nav aria-label="Breadcrumb" className="text-xs text-[#7A655C] flex items-center gap-2">
+            <Link to="/" className="hover:text-[#6D1836]">
+              Home Studio
             </Link>
             <span aria-hidden="true">/</span>
-            <Link to="/shop" className="hover:text-[#C86D51]">
-              Shop
+            <Link to="/shop" className="hover:text-[#6D1836]">
+              Shop All Works
             </Link>
-            {routeGroup && (
+            {activeRouteSlug && (
               <>
                 <span aria-hidden="true">/</span>
-                <span className="text-[#2B2623] capitalize">{routeGroup}</span>
+                <span className="text-[#3E2F27]">{matchedCat?.label ?? activeRouteSlug}</span>
               </>
             )}
           </nav>
 
           <div className="max-w-2xl">
-            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-medium text-[#2B2623] text-balance">
-              {copy.title}
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-medium text-[#3E2F27] text-balance">
+              {title}
             </h1>
-            <p className="text-sm sm:text-base text-[#6E655F] mt-2 leading-relaxed">
-              {copy.subtitle}
-            </p>
-            <p className="font-handwritten text-xl text-[#C86D51] mt-1">{copy.note}</p>
+            <p className="text-sm sm:text-base text-[#7A655C] mt-2 leading-relaxed">{subtitle}</p>
+            <p className="font-handwritten text-xl text-[#6D1836] mt-1">{note}</p>
           </div>
         </div>
 
         {/* Category Pills on full shop */}
-        {!routeGroup && (
+        {!activeRouteSlug && (
           <CategoryPills
             activeCategory={filters.category}
             onSelect={(category) => setFilters((prev) => ({ ...prev, category }))}
@@ -111,7 +93,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({ routeGroup }) => {
           filters={filters}
           onChange={setFilters}
           totalCount={products.length}
-          showCategorySelect={!routeGroup}
+          showCategorySelect={!activeRouteSlug}
         />
 
         <ProductGrid products={products} columns={4} onResetFilters={resetFilters} />

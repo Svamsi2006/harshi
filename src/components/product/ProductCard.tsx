@@ -31,13 +31,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <motion.article
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className="group flex flex-col bg-white border border-[#EAE3D5] rounded-2xl p-2.5 sm:p-3 shadow-warm/50 hover:shadow-warm transition-shadow duration-200"
+      className="group flex flex-col bg-white border border-[#E7C7CC]/80 rounded-2xl p-2.5 sm:p-3 shadow-warm/40 hover:shadow-warm transition-shadow duration-200"
     >
-      {/* Artwork Visual Container */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F3EDE2]">
+      {/* Visual Container */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F8EFEA]">
         <Link
           to={`/product/${product.slug}`}
-          className="block w-full h-full focus-visible:outline-2 focus-visible:outline-[#C86D51]"
+          className="block w-full h-full focus-visible:outline-2 focus-visible:outline-[#6D1836]"
           aria-label={`View ${product.name}`}
         >
           <ResilientImage
@@ -68,7 +68,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <WishlistButton productId={product.id} productName={product.name} />
         </div>
 
-        {/* Desktop hover quick-add pill */}
+        {/* Desktop hover quick-add */}
         <div className="hidden sm:block absolute inset-x-3 bottom-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
           <motion.button
             type="button"
@@ -77,8 +77,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             disabled={product.stock <= 0}
             className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm transition-colors ${
               justAdded
-                ? 'bg-[#7A9178] text-white'
-                : 'bg-[#FAF7F2]/95 hover:bg-[#C86D51] text-[#2B2623] hover:text-white border border-[#EAE3D5] hover:border-[#C86D51]'
+                ? 'bg-[#C9A66B] text-[#3E2F27]'
+                : 'bg-[#FFF9F5]/95 hover:bg-[#6D1836] text-[#3E2F27] hover:text-[#FFF9F5] border border-[#E7C7CC] hover:border-[#6D1836]'
             }`}
           >
             {justAdded ? (
@@ -98,24 +98,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       {/* Product Metadata & Actions */}
       <div className="flex flex-col flex-1 pt-3 px-1 pb-1">
-        <p className="text-[11px] sm:text-xs text-[#6E655F] truncate">
-          {product.medium} <span aria-hidden="true">·</span> {product.dimensions}
+        <p className="text-[11px] sm:text-xs text-[#7A655C] truncate">
+          {product.categoryLabel} <span aria-hidden="true">·</span> {product.dimensions}
         </p>
 
         <Link
           to={`/product/${product.slug}`}
-          className="mt-1 font-display text-sm sm:text-base font-medium text-[#2B2623] hover:text-[#C86D51] transition-colors line-clamp-1"
+          className="mt-1 font-display text-sm sm:text-base font-medium text-[#3E2F27] hover:text-[#6D1836] transition-colors line-clamp-1"
         >
           {product.name}
         </Link>
 
         <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-sm sm:text-[15px] font-semibold text-[#2B2623] tabular-nums">
+            <span className="text-sm sm:text-[15px] font-semibold text-[#3E2F27] tabular-nums">
               {formatINR(product.price)}
             </span>
             {product.originalPrice && (
-              <span className="text-xs text-[#6E655F] line-through tabular-nums">
+              <span className="text-xs text-[#7A655C] line-through tabular-nums">
                 {formatINR(product.originalPrice)}
               </span>
             )}
@@ -129,8 +129,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             aria-label={`Add ${product.name} to cart`}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
               justAdded
-                ? 'bg-[#7A9178] text-white'
-                : 'bg-[#C86D51] hover:bg-[#B2593E] text-white'
+                ? 'bg-[#C9A66B] text-[#3E2F27]'
+                : 'bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5]'
             }`}
           >
             {justAdded ? 'Added' : 'Add'}

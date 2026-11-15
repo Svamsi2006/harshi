@@ -2,6 +2,7 @@ import type {
   Address,
   CartHistoryEntry,
   CartItem,
+  CategoryItem,
   CommissionRequest,
   Coupon,
   CustomerUser,
@@ -10,11 +11,12 @@ import type {
   Product,
   StoreSettings,
 } from '../types';
-import { PRODUCTS } from '../data/products';
+import { DEFAULT_CATEGORIES, PRODUCTS } from '../data/products';
+import { STUDIO_MEDIA } from '../data/studioImages';
 import { DEMO_CUSTOMER, INITIAL_ADDRESSES, INITIAL_CART_HISTORY, INITIAL_ORDERS } from '../data/mockAccount';
 export { DEMO_CUSTOMER };
 
-const KEY_PREFIX = 'varniks_atelier_v2';
+const KEY_PREFIX = 'varniks_atelier_v3';
 
 export const DEMO_OWNER: CustomerUser = {
   id: 'owner-varniks-01',
@@ -36,7 +38,7 @@ const INITIAL_COUPONS: Coupon[] = [
   },
   {
     id: 'coup-2',
-    code: 'ARTLOVER15',
+    code: 'HEARTMADE15',
     discountType: 'percentage',
     discountValue: 15,
     minimumOrder: 2500,
@@ -51,8 +53,63 @@ const INITIAL_SETTINGS: StoreSettings = {
   currency: 'INR',
   freeShippingThreshold: 999,
   defaultShippingFee: 95,
-  announcementText: 'Free shipping on orders above ₹999 • Every piece is packed with love ♡',
+  announcementText: 'Handmade • Heartmade • Heartfelt — Free shipping on orders above ₹999',
 };
+
+const INITIAL_COMMISSIONS: CommissionRequest[] = [
+  {
+    id: 'CUST-9821',
+    customerId: 'cust-ananya-01',
+    customerName: 'Aarav Mehta',
+    email: 'aarav@example.com',
+    phone: '+91 98112 33445',
+    categorySlug: 'frames-led',
+    categoryLabel: 'Frames & LED Frames',
+    customIdea: 'Anniversary Pressed Rose LED Frame with Custom Date',
+    artworkType: 'Frames & LED Frames',
+    preferredStyle: 'Warm Gold Botanicals & Ivory Mat',
+    approximateSize: '10 × 10 inches',
+    budgetRange: '₹1,500 – ₹2,999',
+    isCustomPrice: false,
+    predictedPrice: 2299,
+    hasUploadedFile: true,
+    referenceImageName: 'anniversary_couple_photo.jpg',
+    referenceImageData: STUDIO_MEDIA.ledMemoryFrame,
+    description: 'Would love burgundy pressed roses around our anniversary photo with warm LED fairy lights.',
+    status: 'Admin Approved',
+    adminApproved: true,
+    customerApproved: false,
+    orderCreated: false,
+    quotedPrice: 2299,
+    internalNotes: 'Photo resolution verified. Dried burgundy cosmos ready.',
+    submittedAt: '2026-11-12T14:20:00Z',
+  },
+  {
+    id: 'CUST-9844',
+    customerId: 'cust-ananya-01',
+    customerName: 'Ananya Deshmukh',
+    email: 'ananya@example.com',
+    phone: '+91 98204 51120',
+    categorySlug: 'clay-pipe-cleaner',
+    categoryLabel: 'Clay & Pipe Cleaner Creations',
+    customIdea: 'Custom Tulip & Lavender Bouquet in Cream Speckled Pot',
+    artworkType: 'Clay & Pipe Cleaner Creations',
+    preferredStyle: 'Blush Velvet Wrap with Gold Tag',
+    approximateSize: '9 inches tall',
+    budgetRange: 'Custom Price',
+    isCustomPrice: true,
+    predictedPrice: 1450,
+    hasUploadedFile: true,
+    referenceImageName: 'bouquet_palette_inspo.png',
+    referenceImageData: STUDIO_MEDIA.clayPipecleanerBouquet,
+    description: 'Matching my friend’s bedroom palette in blush, burgundy, and cream.',
+    status: 'Waiting List',
+    adminApproved: false,
+    customerApproved: false,
+    orderCreated: false,
+    submittedAt: '2026-11-14T09:15:00Z',
+  },
+];
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -68,7 +125,7 @@ function writeJson<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Ignore storage quota errors in sandboxed iframes
+    // Ignore storage quota errors
   }
 }
 
@@ -102,7 +159,43 @@ export const storeService = {
     writeJson(`${KEY_PREFIX}:users`, updated);
   },
 
-  // Products CRUD (Admin + Storefront)
+  // Dynamic Categories CRUD
+  getCategories(): CategoryItem[] {
+    return readJson<CategoryItem[]>(`${KEY_PREFIX}:categories`, DEFAULT_CATEGORIES);
+  },
+
+  saveCategories(categories: CategoryItem[]): void {
+    writeJson(`${KEY_PREFIX}:categories`, categories);
+  },
+
+  addCategory(input: { label: string; subtitle?: string }): CategoryItem {
+    const categories = this.getCategories();
+    const baseSlug = input.label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const slug = categories.some((c) => c.slug === baseSlug)
+      ? `${baseSlug}-${Date.now().toString().slice(-3)}`
+      : baseSlug;
+    const item: CategoryItem = {
+      id: `cat-${Date.now()}`,
+      slug,
+      label: input.label.trim(),
+      subtitle: input.subtitle?.trim() || `Handmade ${input.label.trim()} crafted in our studio`,
+      isDefault: false,
+    };
+    const next = [...categories, item];
+    this.saveCategories(next);
+    return item;
+  },
+
+  deleteCategory(idOrSlug: string): void {
+    const categories = this.getCategories();
+    const next = categories.filter((c) => c.id !== idOrSlug && c.slug !== idOrSlug);
+    this.saveCategories(next);
+  },
+
+  // Products CRUD
   getProducts(): Product[] {
     return readJson<Product[]>(`${KEY_PREFIX}:products`, PRODUCTS);
   },
@@ -170,23 +263,9 @@ export const storeService = {
     this.saveAllOrders(next);
   },
 
-  // Commissions
+  // Custom Orders / Commissions
   getCommissions(): CommissionRequest[] {
-    return readJson<CommissionRequest[]>(`${KEY_PREFIX}:commissions`, [
-      {
-        id: 'COM-9821',
-        customerName: 'Aarav Mehta',
-        email: 'aarav@example.com',
-        phone: '+91 98112 33445',
-        artworkType: 'Charcoal Portrait',
-        preferredStyle: 'Detailed Realism',
-        approximateSize: '16 × 20 inches',
-        budgetRange: '₹5,000 – ₹10,000',
-        description: 'Family heirloom portrait study from old sepia photograph.',
-        status: 'New',
-        submittedAt: '2026-11-12T14:20:00Z',
-      },
-    ]);
+    return readJson<CommissionRequest[]>(`${KEY_PREFIX}:commissions`, INITIAL_COMMISSIONS);
   },
 
   saveCommissions(commissions: CommissionRequest[]): void {
@@ -199,13 +278,34 @@ export const storeService = {
     this.saveCommissions(next);
   },
 
-  updateCommissionStatus(id: string, status: CommissionRequest['status'], quotedPrice?: number, internalNotes?: string): void {
+  updateCommission(updated: CommissionRequest): void {
+    const items = this.getCommissions();
+    const next = items.map((c) => (c.id === updated.id ? updated : c));
+    this.saveCommissions(next);
+  },
+
+  updateCommissionStatus(
+    id: string,
+    status: CommissionRequest['status'],
+    quotedPrice?: number,
+    internalNotes?: string
+  ): void {
     const items = this.getCommissions();
     const next = items.map((c) =>
       c.id === id
         ? {
             ...c,
             status,
+            adminApproved:
+              status === 'Admin Approved' ||
+              status === 'Customer Approved' ||
+              status === 'Order Created' ||
+              status === 'In Progress' ||
+              status === 'Completed'
+                ? true
+                : status === 'Rejected'
+                  ? false
+                  : c.adminApproved,
             quotedPrice: quotedPrice ?? c.quotedPrice,
             internalNotes: internalNotes ?? c.internalNotes,
           }
@@ -249,7 +349,7 @@ export const storeService = {
 
   getWishlist(userId?: string | null): string[] {
     const scope = this.accountScope(userId);
-    return readJson<string[]>(`${KEY_PREFIX}:wishlist:${scope}`, ['va-01', 'va-07']);
+    return readJson<string[]>(`${KEY_PREFIX}:wishlist:${scope}`, ['va-01', 'va-05']);
   },
 
   saveWishlist(ids: string[], userId?: string | null): void {
@@ -285,7 +385,7 @@ export const storeService = {
     return all.filter((o) => o.customerId === userId);
   },
 
-  saveUserOrder(order: Order, userId?: string | null): void {
+  saveUserOrder(order: Order): void {
     const all = this.getAllOrders();
     const next = [order, ...all];
     this.saveAllOrders(next);
@@ -293,9 +393,9 @@ export const storeService = {
 
   getRecentSearches(): string[] {
     return readJson<string[]>(`${KEY_PREFIX}:recent_searches`, [
-      'Terracotta Ganesha',
-      'Village sketch',
-      'Watercolor print',
+      'Resin coasters',
+      'LED photo frame',
+      'Pipe cleaner bouquet',
     ]);
   },
 
