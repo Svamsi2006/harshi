@@ -20,11 +20,21 @@ import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import { STUDIO_MEDIA } from '../data/studioImages';
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '../utils/format';
 
+export interface SupabaseSyncDiagnostics {
+  hasUrl: boolean;
+  hasKey: boolean;
+  hasDatabaseUrl: boolean;
+  urlSource?: string | null;
+  keySource?: string | null;
+  vercel?: boolean;
+}
+
 export interface SupabaseSyncStatus {
   configured: boolean;
   tablesReady: boolean;
   missingTables: string[];
   error?: string;
+  diagnostics?: SupabaseSyncDiagnostics;
   checked: boolean;
 }
 
@@ -191,7 +201,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const refreshSupabaseSync = useCallback(async () => {
     try {
-      const statusRes = await fetch('/api/supabase/status');
+      const statusRes = await fetch('/api/supabase/status', {
+        headers: { Accept: 'application/json' },
+      });
+      const contentType = statusRes.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setSupabaseStatus({
+          configured: false,
+          tablesReady: false,
+          missingTables: [],
+          error:
+            'API route (/api/supabase/status) returned HTML instead of JSON. Ensure Vercel serverless functions in /api are deployed and redeploy.',
+          checked: true,
+        });
+        return;
+      }
+
       const statusJson = await statusRes.json().catch(() => ({}));
       if (!statusRes.ok) {
         setSupabaseStatus({
@@ -199,6 +224,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           tablesReady: false,
           missingTables: [],
           error: statusJson.error || `API returned HTTP ${statusRes.status}`,
+          diagnostics: statusJson.diagnostics,
           checked: true,
         });
         return;
@@ -208,13 +234,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         tablesReady: Boolean(statusJson.tablesReady),
         missingTables: Array.isArray(statusJson.missingTables) ? statusJson.missingTables : [],
         error: typeof statusJson.error === 'string' ? statusJson.error : undefined,
+        diagnostics: statusJson.diagnostics,
         checked: true,
       });
 
       if (!statusJson.tablesReady) return;
 
-      const bootRes = await fetch('/api/bootstrap');
+      const bootRes = await fetch('/api/bootstrap', {
+        headers: { Accept: 'application/json' },
+      });
       if (!bootRes.ok) return;
+      const bootContentType = bootRes.headers.get('content-type') || '';
+      if (!bootContentType.includes('application/json')) return;
       const boot = await bootRes.json();
       if (!boot.synced) return;
 

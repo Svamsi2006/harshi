@@ -220,7 +220,19 @@ export const AdminSettingsPage: React.FC = () => {
                 </p>
                 {supabaseStatus.error && (
                   <p className="mt-1 text-[#7A655C]">
-                    {supabaseStatus.error}. Confirm the Vercel deployment includes the API function and redeploy after changing environment variables.
+                    {supabaseStatus.error}
+                  </p>
+                )}
+                {supabaseStatus.diagnostics && (
+                  <p className="mt-1 text-[#7A655C] font-mono text-[11px]">
+                    URL: {supabaseStatus.diagnostics.hasUrl ? `ok (${supabaseStatus.diagnostics.urlSource})` : 'missing'} ·
+                    Key: {supabaseStatus.diagnostics.hasKey ? `ok (${supabaseStatus.diagnostics.keySource})` : 'missing'} ·
+                    DB URL: {supabaseStatus.diagnostics.hasDatabaseUrl ? 'present' : 'not set'}
+                  </p>
+                )}
+                {!supabaseStatus.error && !supabaseStatus.configured && (
+                  <p className="mt-1 text-[#7A655C]">
+                    Add <span className="font-mono">SUPABASE_URL</span> and <span className="font-mono">SUPABASE_SECRET_KEY</span> (or <span className="font-mono">SUPABASE_SERVICE_ROLE_KEY</span>) to Vercel Environment Variables, then redeploy.
                   </p>
                 )}
                 {supabaseStatus.missingTables.length > 0 && (

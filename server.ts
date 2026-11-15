@@ -8,19 +8,56 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseSecretKey =
-  process.env.SUPABASE_SECRET_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  '';
+function pickEnvVar(names: string[]): { value: string; source?: string } {
+  for (const name of names) {
+    const raw = process.env[name];
+    if (typeof raw === 'string') {
+      const cleaned = raw.trim().replace(/^["']|["']$/g, '');
+      if (cleaned) {
+        return { value: cleaned, source: name };
+      }
+    }
+  }
+  return { value: '' };
+}
 
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseSecretKey
-    ? createClient(supabaseUrl, supabaseSecretKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-    : null;
+const resolvedUrl = pickEnvVar([
+  'SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'VITE_SUPABASE_URL',
+  'SUPERBASE_URL',
+  'NEXT_PUBLIC_SUPERBASE_URL',
+  'VITE_SUPERBASE_URL',
+]);
+
+const resolvedKey = pickEnvVar([
+  'SUPABASE_SECRET_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SERVICE_KEY',
+  'SUPERBASE_SECRET_KEY',
+  'SUPERBASE_SERVICE_ROLE_KEY',
+  'SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'VITE_SUPABASE_ANON_KEY',
+]);
+
+const resolvedDbUrl = pickEnvVar(['DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL']);
+
+const supabaseUrl = resolvedUrl.value;
+const supabaseSecretKey = resolvedKey.value;
+
+let supabaseInitError = '';
+let supabase: SupabaseClient | null = null;
+if (supabaseUrl && supabaseSecretKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseSecretKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err: any) {
+    supabaseInitError = err?.message || 'Failed to initialize Supabase client';
+    supabase = null;
+  }
+}
 
 const REQUIRED_TABLES = [
   'studio_users',
@@ -340,20 +377,57 @@ function mapDbSettingsToApp(row: Record<string, any>, ext?: ExtendedStudioConfig
 }
 
 async function checkSupabaseTables() {
+  const diagnostics = {
+    hasUrl: Boolean(supabaseUrl),
+    hasKey: Boolean(supabaseSecretKey),
+    hasDatabaseUrl: Boolean(resolvedDbUrl.value),
+    urlSource: resolvedUrl.source ?? null,
+    keySource: resolvedKey.source ?? null,
+    vercel: process.env.VERCEL === '1',
+  };
+
   if (!supabase) {
-    return { configured: false, tablesReady: false, missingTables: [...REQUIRED_TABLES] };
+    let reason: string | undefined;
+    if (supabaseInitError) {
+      reason = supabaseInitError;
+    } else if (!supabaseUrl && !supabaseSecretKey && diagnostics.hasDatabaseUrl) {
+      reason = 'Found DATABASE_URL, but SUPABASE_URL and SUPABASE_SECRET_KEY are missing';
+    } else if (supabaseUrl && !supabaseSecretKey) {
+      reason = 'Found Supabase URL, but SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) is missing';
+    } else if (!supabaseUrl && supabaseSecretKey) {
+      reason = 'Found Supabase key, but SUPABASE_URL is missing';
+    }
+    return {
+      configured: false,
+      tablesReady: false,
+      missingTables: [...REQUIRED_TABLES],
+      error: reason,
+      diagnostics,
+    };
   }
+
   const missingTables: string[] = [];
   for (const table of REQUIRED_TABLES) {
     const { error } = await supabase.from(table).select('id').limit(1);
-    if (error && (error.code === 'PGRST205' || error.code === '42P01' || error.message?.includes('schema cache'))) {
-      missingTables.push(table);
+    if (error) {
+      if (error.code === 'PGRST205' || error.code === '42P01' || error.message?.includes('schema cache')) {
+        missingTables.push(table);
+      } else {
+        return {
+          configured: true,
+          tablesReady: false,
+          missingTables: [],
+          error: error.message || 'Supabase query failed (verify URL and secret/service-role key)',
+          diagnostics,
+        };
+      }
     }
   }
   return {
     configured: true,
     tablesReady: missingTables.length === 0,
     missingTables,
+    diagnostics,
   };
 }
 
@@ -367,6 +441,9 @@ export function createApp() {
       supabaseConfigured: Boolean(supabase),
       hasSupabaseUrl: Boolean(supabaseUrl),
       hasSupabaseSecretKey: Boolean(supabaseSecretKey),
+      hasDatabaseUrl: Boolean(resolvedDbUrl.value),
+      urlSource: resolvedUrl.source ?? null,
+      keySource: resolvedKey.source ?? null,
       vercel: process.env.VERCEL === '1',
     });
   });
@@ -376,7 +453,12 @@ export function createApp() {
       const status = await checkSupabaseTables();
       res.json(status);
     } catch (err: any) {
-      res.json({ configured: Boolean(supabase), tablesReady: false, missingTables: [...REQUIRED_TABLES], error: err?.message });
+      res.json({
+        configured: Boolean(supabase),
+        tablesReady: false,
+        missingTables: [...REQUIRED_TABLES],
+        error: err?.message || 'Unable to verify Supabase connection',
+      });
     }
   });
 
@@ -954,7 +1036,8 @@ async function startServer() {
   const app = createApp();
 
   if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
+    const vitePkg = ['vi', 'te'].join('');
+    const { createServer: createViteServer } = await import(/* @vite-ignore */ vitePkg);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
