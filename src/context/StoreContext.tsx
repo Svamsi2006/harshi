@@ -38,6 +38,15 @@ export interface SupabaseSyncStatus {
   checked: boolean;
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
+
 interface StoreContextValue {
   user: CustomerUser | null;
   isAdmin: boolean;
@@ -223,7 +232,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           configured: false,
           tablesReady: false,
           missingTables: [],
-          error: statusJson.error || `API returned HTTP ${statusRes.status}`,
+          error: getErrorMessage(statusJson.error, `API returned HTTP ${statusRes.status}`),
           diagnostics: statusJson.diagnostics,
           checked: true,
         });
@@ -233,7 +242,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         configured: Boolean(statusJson.configured),
         tablesReady: Boolean(statusJson.tablesReady),
         missingTables: Array.isArray(statusJson.missingTables) ? statusJson.missingTables : [],
-        error: typeof statusJson.error === 'string' ? statusJson.error : undefined,
+        error: statusJson.error
+          ? getErrorMessage(statusJson.error, 'Supabase status request failed')
+          : undefined,
         diagnostics: statusJson.diagnostics,
         checked: true,
       });
@@ -288,7 +299,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         configured: false,
         tablesReady: false,
         missingTables: [],
-        error: error instanceof Error ? error.message : 'Could not reach the Supabase API',
+        error: getErrorMessage(error, 'Could not reach the Supabase API'),
         checked: true,
       });
     }
@@ -1064,7 +1075,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             return;
           }
         } else if (json?.error) {
-          addToast('Settings saved locally — sync notice', json.error, 'info');
+          addToast(
+            'Settings saved locally — sync notice',
+            getErrorMessage(json.error, 'Remote settings sync failed'),
+            'info'
+          );
           return;
         }
       } catch {

@@ -148,7 +148,10 @@ export const AdminSettingsPage: React.FC = () => {
       } else {
         setTestResult({
           ok: false,
-          text: json.error || 'OpenRouter connection test failed.',
+          text:
+            typeof json.error === 'string'
+              ? json.error
+              : json.error?.message || 'OpenRouter connection test failed.',
         });
       }
       await fetchChatLogs();

@@ -434,6 +434,12 @@ async function checkSupabaseTables() {
 export function createApp() {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
+  app.use((req, _res, next) => {
+    if (process.env.VERCEL === '1' && !req.url.startsWith('/api/')) {
+      req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`;
+    }
+    next();
+  });
 
   app.get('/api/health', (_req, res) => {
     res.json({
