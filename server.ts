@@ -6,7 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT || 3000);
+const PORT =
+  process.env.NODE_ENV === 'production' ? Number(process.env.PORT || 3000) : 3000;
 
 function pickEnvVar(names: string[]): { value: string; source?: string } {
   for (const name of names) {
@@ -41,10 +42,28 @@ const resolvedKey = pickEnvVar([
   'VITE_SUPABASE_ANON_KEY',
 ]);
 
+// Strictly public anon/publishable key for browser Supabase Google OAuth (never secret/service-role keys)
+const resolvedPublicAnonKey = pickEnvVar([
+  'SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'VITE_SUPABASE_ANON_KEY',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+  'VITE_SUPABASE_PUBLISHABLE_KEY',
+  'SUPERBASE_ANON_KEY',
+]);
+
 const resolvedDbUrl = pickEnvVar(['DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL']);
 
 const supabaseUrl = resolvedUrl.value;
 const supabaseSecretKey = resolvedKey.value;
+const supabasePublicAnonKey =
+  resolvedPublicAnonKey.value &&
+  !resolvedPublicAnonKey.value.startsWith('sb_secret_') &&
+  resolvedPublicAnonKey.value !== process.env.SUPABASE_SECRET_KEY &&
+  resolvedPublicAnonKey.value !== process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? resolvedPublicAnonKey.value
+    : '';
 
 let supabaseInitError = '';
 let supabase: SupabaseClient | null = null;
@@ -447,11 +466,115 @@ export function createApp() {
       supabaseConfigured: Boolean(supabase),
       hasSupabaseUrl: Boolean(supabaseUrl),
       hasSupabaseSecretKey: Boolean(supabaseSecretKey),
+      hasSupabaseAnonKey: Boolean(supabasePublicAnonKey),
       hasDatabaseUrl: Boolean(resolvedDbUrl.value),
       urlSource: resolvedUrl.source ?? null,
       keySource: resolvedKey.source ?? null,
       vercel: process.env.VERCEL === '1',
     });
+  });
+
+  // Public auth config for Supabase Google OAuth in the browser (never exposes secret/service keys)
+  app.get('/api/auth/config', (_req, res) => {
+    res.json({
+      url: supabaseUrl,
+      anonKey: supabasePublicAnonKey,
+      googleAuthEnabled: Boolean(supabaseUrl && supabasePublicAnonKey),
+    });
+  });
+
+  // Verify Supabase Auth JWT from browser and sync user into studio_users
+  app.post('/api/auth/supabase-sync', async (req, res) => {
+    const authHeader = String(req.headers.authorization || '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!token) {
+      return res.status(401).json({ ok: false, error: 'Missing authentication token.' });
+    }
+    if (!supabase) {
+      return res.status(503).json({ ok: false, error: 'Supabase is not configured on the server.' });
+    }
+
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !authData?.user) {
+        return res.status(401).json({ ok: false, error: authError?.message || 'Invalid Supabase session token.' });
+      }
+
+      const authUser = authData.user;
+      const email = (authUser.email || '').trim().toLowerCase();
+      if (!email) {
+        return res.status(400).json({ ok: false, error: 'Google account did not provide an email address.' });
+      }
+
+      const meta = (authUser.user_metadata || {}) as Record<string, any>;
+      const fullName =
+        String(meta.full_name || meta.name || email.split('@')[0] || 'Studio Collector').trim();
+      const phone = String(authUser.phone || meta.phone || '').trim();
+      const joinedAt = authUser.created_at
+        ? String(authUser.created_at).slice(0, 10)
+        : new Date().toISOString().split('T')[0];
+
+      // Determine role strictly on server (never trust client-supplied role)
+      const ownerEmail = (process.env.STUDIO_OWNER_EMAIL || 'owner@varniksatelier.studio')
+        .trim()
+        .toLowerCase();
+      let role: 'customer' | 'owner' = email === ownerEmail ? 'owner' : 'customer';
+
+      try {
+        const { data: existing } = await supabase
+          .from('studio_users')
+          .select('id, role, phone, full_name')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (existing?.role === 'owner') {
+          role = 'owner';
+        }
+
+        const userId = existing?.id || `sb-${authUser.id}`;
+        const finalPhone = phone || existing?.phone || '';
+        const finalName = fullName || existing?.full_name || 'Studio Collector';
+
+        await supabase.from('studio_users').upsert(
+          {
+            id: userId,
+            full_name: finalName,
+            email,
+            phone: finalPhone,
+            role,
+            joined_at: joinedAt,
+          },
+          { onConflict: 'email' }
+        );
+
+        return res.json({
+          ok: true,
+          user: {
+            id: userId,
+            fullName: finalName,
+            email,
+            phone: finalPhone,
+            joinedAt,
+            role,
+          },
+        });
+      } catch {
+        // Fallback if studio_users table hasn't been created yet — user is still verified by Supabase Auth
+        return res.json({
+          ok: true,
+          user: {
+            id: `sb-${authUser.id}`,
+            fullName,
+            email,
+            phone,
+            joinedAt,
+            role,
+          },
+        });
+      }
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Failed to verify Google login.' });
+    }
   });
 
   app.get('/api/supabase/status', async (_req, res) => {
@@ -708,9 +831,37 @@ export function createApp() {
 
   // Orders
   app.post('/api/orders', async (req, res) => {
+    const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, any>;
+    const customerId = String(body.customerId || '').trim();
+    const customerEmail = String(body.customerEmail || '').trim();
+    const addr = body.shippingAddress as Record<string, any> | undefined;
+
+    if (!customerId || customerId === 'guest') {
+      return res.status(401).json({
+        synced: false,
+        error: 'Login is required before placing or confirming an order.',
+      });
+    }
+
+    if (
+      !customerEmail ||
+      !addr ||
+      !String(addr.fullName || '').trim() ||
+      !String(addr.phone || '').trim() ||
+      !String(addr.addressLine || '').trim() ||
+      !String(addr.city || '').trim() ||
+      !String(addr.state || '').trim() ||
+      !String(addr.postalCode || '').trim()
+    ) {
+      return res.status(400).json({
+        synced: false,
+        error: 'Complete shipping address, phone number, and email are required before confirming an order.',
+      });
+    }
+
     if (!supabase) return res.json({ synced: false });
     try {
-      const row = mapAppOrderToDb(req.body);
+      const row = mapAppOrderToDb(body);
       const { error } = await supabase.from('orders').upsert(row, { onConflict: 'id' });
       if (error) return res.status(400).json({ synced: false, error: error.message });
       return res.json({ synced: true });

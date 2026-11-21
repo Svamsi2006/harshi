@@ -8,6 +8,7 @@ import { CartItemRow } from './CartItem';
 
 export const CartDrawer: React.FC = () => {
   const {
+    user,
     cart,
     cartCount,
     cartSubtotal,
@@ -154,13 +155,22 @@ export const CartDrawer: React.FC = () => {
                     type="button"
                     onClick={() => {
                       closeCartDrawer();
-                      navigate('/checkout');
+                      if (!user) {
+                        navigate('/login?redirect=%2Fcheckout', { state: { from: '/checkout' } });
+                      } else {
+                        navigate('/checkout');
+                      }
                     }}
                     className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
                   >
-                    <span>Proceed to Checkout</span>
+                    <span>{user ? 'Proceed to Checkout' : 'Sign In & Checkout'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
+                  {!user && (
+                    <p className="text-[11px] text-center text-[#7A655C]">
+                      Sign in is required to enter your address &amp; track your order.
+                    </p>
+                  )}
                   <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"

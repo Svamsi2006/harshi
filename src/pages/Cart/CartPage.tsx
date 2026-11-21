@@ -9,7 +9,8 @@ import { CartItemRow } from '../../components/cart/CartItem';
 import { ProductGrid } from '../../components/product/ProductGrid';
 
 export const CartPage: React.FC = () => {
-  const { products, coupons, cart, cartCount, cartSubtotal, shippingFee, addToast } = useStore();
+  const { user, products, coupons, cart, cartCount, cartSubtotal, shippingFee, addToast } =
+    useStore();
   const navigate = useNavigate();
 
   const [promoCode, setPromoCode] = useState('');
@@ -24,6 +25,32 @@ export const CartPage: React.FC = () => {
       ? Math.round(cartSubtotal * 0.1)
       : 0;
   const finalTotal = Math.max(0, cartSubtotal + shippingFee - discount);
+
+  const handleProceedToCheckout = () => {
+    try {
+      if (discount > 0) {
+        sessionStorage.setItem('varniks_checkout_discount', String(discount));
+      } else {
+        sessionStorage.removeItem('varniks_checkout_discount');
+      }
+    } catch {
+      // ignore
+    }
+
+    if (!user) {
+      addToast(
+        'Sign in required for checkout',
+        'Log in with Google or email to enter your address & track your order.',
+        'info'
+      );
+      navigate('/login?redirect=%2Fcheckout', {
+        state: { from: '/checkout', discount },
+      });
+      return;
+    }
+
+    navigate('/checkout', { state: { discount } });
+  };
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,14 +167,21 @@ export const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate('/checkout', { state: { discount } })}
-                className="w-full py-3.5 px-6 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
-              >
-                <span>Proceed to Checkout</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleProceedToCheckout}
+                  className="w-full py-3.5 px-6 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>{user ? 'Proceed to Checkout' : 'Sign In & Proceed to Checkout'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                {!user && (
+                  <p className="text-[11px] text-center text-[#7A655C] leading-relaxed">
+                    Sign in is required to enter your delivery address &amp; track your order. Your bag items stay saved automatically.
+                  </p>
+                )}
+              </div>
             </aside>
           </div>
         )}

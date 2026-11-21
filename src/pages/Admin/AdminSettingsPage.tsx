@@ -13,6 +13,9 @@ import {
   Bot,
   KeyRound,
   Activity,
+  ShieldCheck,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -46,9 +49,38 @@ const OPENROUTER_MODEL_PRESETS = [
   'meta-llama/llama-3.3-70b-instruct:free',
 ];
 
+function safeLogTime(raw: string): string {
+  const dt = new Date(raw);
+  return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleTimeString();
+}
+
+function sanitizeChatLog(raw: unknown, idx: number): ChatLogItem {
+  const item = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const statusRaw = String(item.status ?? 'ok');
+  const status: ChatLogItem['status'] =
+    statusRaw === 'ok' || statusRaw === 'fallback' || statusRaw === 'error' ? statusRaw : 'ok';
+  const latency = Number(item.latencyMs);
+  return {
+    id: typeof item.id === 'string' && item.id ? item.id : `log-${idx}`,
+    timestamp: typeof item.timestamp === 'string' ? item.timestamp : '',
+    model: typeof item.model === 'string' ? item.model : 'unknown',
+    userMessage: typeof item.userMessage === 'string' ? item.userMessage : '',
+    replyPreview: typeof item.replyPreview === 'string' ? item.replyPreview : '',
+    status,
+    latencyMs: Number.isFinite(latency) ? latency : 0,
+    errorDetail: typeof item.errorDetail === 'string' ? item.errorDetail : undefined,
+  };
+}
+
 export const AdminSettingsPage: React.FC = () => {
-  const { storeSettings, saveStoreSettings, supabaseStatus, refreshSupabaseSync, addToast } =
-    useStore();
+  const {
+    storeSettings,
+    saveStoreSettings,
+    supabaseStatus,
+    refreshSupabaseSync,
+    googleAuthAvailable,
+    addToast,
+  } = useStore();
 
   const [form, setForm] = useState(storeSettings);
   const [openrouterKeyInput, setOpenrouterKeyInput] = useState('');
@@ -60,6 +92,10 @@ export const AdminSettingsPage: React.FC = () => {
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [chatLogs, setChatLogs] = useState<ChatLogItem[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [copiedCallback, setCopiedCallback] = useState(false);
+
+  const authCallbackUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
 
   useEffect(() => {
     setForm((prev) => ({
@@ -71,11 +107,14 @@ export const AdminSettingsPage: React.FC = () => {
   const fetchChatLogs = useCallback(async () => {
     setLoadingLogs(true);
     try {
-      const res = await fetch('/api/chat/logs');
-      if (res.ok) {
+      const res = await fetch('/api/chat/logs', {
+        headers: { Accept: 'application/json' },
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const json = await res.json();
-        if (Array.isArray(json.logs)) {
-          setChatLogs(json.logs);
+        if (Array.isArray(json?.logs)) {
+          setChatLogs(json.logs.map((entry: unknown, idx: number) => sanitizeChatLog(entry, idx)));
         }
       }
     } catch {
@@ -254,6 +293,51 @@ export const AdminSettingsPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Supabase Google Authentication Readiness */}
+          <div className="pt-3 border-t border-[#E7C7CC]/70 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#6D1836]" />
+                <p className="text-xs font-semibold text-[#3E2F27]">
+                  Supabase Google Authentication (Mandatory Customer Login)
+                </p>
+              </div>
+              <span
+                className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${
+                  googleAuthAvailable
+                    ? 'bg-[#C9A66B]/25 text-[#3E2F27]'
+                    : 'bg-[#F8EFEA] text-[#6D1836] border border-[#E7C7CC]'
+                }`}
+              >
+                {googleAuthAvailable ? 'Google OAuth Ready ✓' : 'Needs SUPABASE_ANON_KEY'}
+              </span>
+            </div>
+            <p className="text-xs text-[#7A655C] leading-relaxed">
+              Add <span className="font-mono">SUPABASE_ANON_KEY</span> (public anon/publishable key) to your Vercel Environment Variables, enable <strong>Google</strong> in Supabase → Authentication → Providers, and add this Redirect URL:
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-xs font-mono text-[#3E2F27] truncate">
+                {authCallbackUrl}
+              </code>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(authCallbackUrl);
+                    setCopiedCallback(true);
+                    window.setTimeout(() => setCopiedCallback(false), 1800);
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#E7C7CC] hover:border-[#6D1836] text-xs font-medium text-[#3E2F27]"
+              >
+                {copiedCallback ? <Check className="w-3.5 h-3.5 text-[#C9A66B]" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedCallback ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* Custom Brand Logo Upload & Animated Startup Reveal */}
@@ -474,7 +558,7 @@ export const AdminSettingsPage: React.FC = () => {
                   <div key={log.id} className="p-3 text-xs space-y-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-mono text-[11px] text-[#7A655C]">
-                        {new Date(log.timestamp).toLocaleTimeString()} · {log.model} · {log.latencyMs}ms
+                        {safeLogTime(log.timestamp)} · {log.model} · {log.latencyMs}ms
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
@@ -512,7 +596,7 @@ export const AdminSettingsPage: React.FC = () => {
               <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Store Name</label>
               <input
                 type="text"
-                value={form.storeName}
+                value={form.storeName ?? ''}
                 onChange={(e) => setForm({ ...form, storeName: e.target.value })}
                 className={inputClass}
               />
@@ -521,7 +605,7 @@ export const AdminSettingsPage: React.FC = () => {
               <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Currency</label>
               <input
                 type="text"
-                value={form.currency}
+                value={form.currency ?? 'INR'}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
                 className={inputClass}
               />
@@ -530,7 +614,7 @@ export const AdminSettingsPage: React.FC = () => {
               <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Contact Email</label>
               <input
                 type="email"
-                value={form.contactEmail}
+                value={form.contactEmail ?? ''}
                 onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
                 className={inputClass}
               />
@@ -539,7 +623,7 @@ export const AdminSettingsPage: React.FC = () => {
               <label className="block text-xs font-medium text-[#7A655C] mb-1.5">Contact Phone</label>
               <input
                 type="text"
-                value={form.contactPhone}
+                value={form.contactPhone ?? ''}
                 onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
                 className={inputClass}
               />
@@ -550,7 +634,7 @@ export const AdminSettingsPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={form.freeShippingThreshold}
+                value={Number.isFinite(Number(form.freeShippingThreshold)) ? Number(form.freeShippingThreshold) : 0}
                 onChange={(e) => setForm({ ...form, freeShippingThreshold: Number(e.target.value) })}
                 className={inputClass}
               />
@@ -561,7 +645,7 @@ export const AdminSettingsPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={form.defaultShippingFee}
+                value={Number.isFinite(Number(form.defaultShippingFee)) ? Number(form.defaultShippingFee) : 0}
                 onChange={(e) => setForm({ ...form, defaultShippingFee: Number(e.target.value) })}
                 className={inputClass}
               />
@@ -574,7 +658,7 @@ export const AdminSettingsPage: React.FC = () => {
             </label>
             <input
               type="text"
-              value={form.announcementText}
+              value={form.announcementText ?? ''}
               onChange={(e) => setForm({ ...form, announcementText: e.target.value })}
               className={inputClass}
             />

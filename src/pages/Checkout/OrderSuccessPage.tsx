@@ -40,8 +40,13 @@ export const OrderSuccessPage: React.FC = () => {
             </h1>
             {order ? (
               <p className="text-sm text-[#7A655C]">
-                Order <strong className="text-[#3E2F27]">#{order.orderNumber}</strong> confirmed ·
-                Payment via{' '}
+                Order <strong className="text-[#3E2F27]">#{order.orderNumber}</strong> · Status:{' '}
+                <strong className="text-[#6D1836]">
+                  {order.orderStatus === 'Pending'
+                    ? 'Pending Studio Confirmation'
+                    : order.orderStatus}
+                </strong>{' '}
+                · Payment via{' '}
                 <span className="capitalize font-medium text-[#3E2F27]">
                   {order.paymentMethod}
                 </span>{' '}
@@ -49,7 +54,7 @@ export const OrderSuccessPage: React.FC = () => {
               </p>
             ) : (
               <p className="text-sm text-[#7A655C]">
-                Your order confirmation details have been recorded.
+                Your order details have been recorded under your account.
               </p>
             )}
           </div>
@@ -70,6 +75,23 @@ export const OrderSuccessPage: React.FC = () => {
                   Tracking: {order.trackingCode}
                 </span>
               </div>
+
+              {order.shippingAddress && (
+                <div className="p-4 rounded-xl bg-[#F8EFEA]/60 border border-[#E7C7CC] text-xs text-[#3E2F27] space-y-1">
+                  <p className="font-semibold text-[#6D1836] uppercase tracking-wider text-[11px]">
+                    Delivering To
+                  </p>
+                  <p className="font-medium">{order.shippingAddress.fullName}</p>
+                  <p className="text-[#7A655C]">
+                    {order.shippingAddress.addressLine}, {order.shippingAddress.city},{' '}
+                    {order.shippingAddress.state} {order.shippingAddress.postalCode},{' '}
+                    {order.shippingAddress.country}
+                  </p>
+                  <p className="text-[#7A655C]">
+                    {order.customerEmail} · {order.shippingAddress.phone}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <h2 className="font-display text-lg font-medium text-[#3E2F27] mb-3">

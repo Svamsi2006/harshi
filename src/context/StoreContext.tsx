@@ -19,6 +19,12 @@ import { DEMO_CUSTOMER, DEMO_OWNER, storeService } from '../services/storeServic
 import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import { STUDIO_MEDIA } from '../data/studioImages';
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '../utils/format';
+import {
+  getBrowserSupabaseClient,
+  getPublicAuthConfig,
+  signOutBrowserSupabase,
+  startSupabaseGoogleSignIn,
+} from '../lib/supabaseAuth';
 
 export interface SupabaseSyncDiagnostics {
   hasUrl: boolean;
@@ -83,6 +89,9 @@ interface StoreContextValue {
     email: string,
     password: string
   ) => { ok: boolean; user?: CustomerUser; error?: string };
+  loginWithGoogle: (redirectPath?: string) => Promise<{ ok: boolean; error?: string }>;
+  googleAuthAvailable: boolean;
+  authSyncing: boolean;
   loginAsDemoCustomer: () => void;
   loginAsDemoOwner: () => void;
   registerCustomer: (data: {
@@ -164,7 +173,7 @@ interface StoreContextValue {
     customerName?: string;
     paymentReference?: string;
     discount?: number;
-  }) => Order;
+  }) => Order | null;
 
   addRecentSearch: (query: string) => void;
   clearRecentSearches: () => void;
@@ -201,12 +210,37 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
+  const [googleAuthAvailable, setGoogleAuthAvailable] = useState(false);
+  const [authSyncing, setAuthSyncing] = useState(false);
   const [supabaseStatus, setSupabaseStatus] = useState<SupabaseSyncStatus>({
     configured: false,
     tablesReady: false,
     missingTables: [],
     checked: false,
   });
+
+  const mergeGuestCartIntoUser = useCallback((targetUserId: string) => {
+    const guestItems = storeService.getCart(undefined);
+    if (guestItems.length === 0) return;
+    const userItems = storeService.getCart(targetUserId);
+    const mergedMap = new Map<string, CartItem>();
+    for (const item of userItems) {
+      mergedMap.set(item.productId, { ...item });
+    }
+    for (const gItem of guestItems) {
+      const existing = mergedMap.get(gItem.productId);
+      if (existing) {
+        mergedMap.set(gItem.productId, {
+          ...existing,
+          quantity: existing.quantity + gItem.quantity,
+        });
+      } else {
+        mergedMap.set(gItem.productId, { ...gItem });
+      }
+    }
+    storeService.saveCart(Array.from(mergedMap.values()), targetUserId);
+    storeService.saveCart([], undefined);
+  }, []);
 
   const refreshSupabaseSync = useCallback(async () => {
     try {
@@ -308,6 +342,94 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     void refreshSupabaseSync();
   }, [refreshSupabaseSync]);
+
+  // Sync Supabase Google OAuth sessions automatically on load & auth state changes
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
+
+    const syncSessionToStore = async (accessToken: string, fallbackUser?: {
+      id: string;
+      email?: string | null;
+      phone?: string | null;
+      created_at?: string;
+      user_metadata?: Record<string, any>;
+    }) => {
+      if (!active) return;
+      setAuthSyncing(true);
+      try {
+        const res = await fetch('/api/auth/supabase-sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const ct = res.headers.get('content-type') || '';
+        const json = ct.includes('application/json') ? await res.json().catch(() => ({})) : {};
+
+        let syncedUser: CustomerUser | null = null;
+        if (res.ok && json?.ok && json.user) {
+          syncedUser = json.user as CustomerUser;
+        } else if (fallbackUser?.email) {
+          const meta = fallbackUser.user_metadata || {};
+          const email = fallbackUser.email.trim().toLowerCase();
+          syncedUser = {
+            id: `sb-${fallbackUser.id}`,
+            fullName: String(meta.full_name || meta.name || email.split('@')[0] || 'Studio Collector'),
+            email,
+            phone: String(fallbackUser.phone || meta.phone || ''),
+            joinedAt: fallbackUser.created_at
+              ? String(fallbackUser.created_at).slice(0, 10)
+              : new Date().toISOString().split('T')[0],
+            role: 'customer',
+          };
+        }
+
+        if (syncedUser && active) {
+          mergeGuestCartIntoUser(syncedUser.id);
+          storeService.setCurrentUser(syncedUser);
+          setUser(syncedUser);
+        }
+      } catch {
+        // ignore network hiccups; local session remains intact
+      } finally {
+        if (active) setAuthSyncing(false);
+      }
+    };
+
+    const initSupabaseAuth = async () => {
+      const cfg = await getPublicAuthConfig();
+      if (active) setGoogleAuthAvailable(cfg.googleAuthEnabled);
+      if (!cfg.googleAuthEnabled) return;
+
+      const client = await getBrowserSupabaseClient();
+      if (!client || !active) return;
+
+      const { data } = await client.auth.getSession();
+      if (data.session?.access_token && data.session.user) {
+        await syncSessionToStore(data.session.access_token, data.session.user);
+      }
+
+      const { data: listener } = client.auth.onAuthStateChange((event, session) => {
+        if (
+          (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') &&
+          session?.access_token &&
+          session.user
+        ) {
+          void syncSessionToStore(session.access_token, session.user);
+        }
+      });
+      unsubscribe = () => listener.subscription.unsubscribe();
+    };
+
+    void initSupabaseAuth();
+
+    return () => {
+      active = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [mergeGuestCartIntoUser]);
 
   useEffect(() => {
     setCart(storeService.getCart(userId));
@@ -518,6 +640,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return { ok: false, error: 'Incorrect password. Please try again.' };
       }
       const { password: _pwd, ...cleanUser } = matched;
+      mergeGuestCartIntoUser(cleanUser.id);
       storeService.setCurrentUser(cleanUser);
       setUser(cleanUser);
       addToast(
@@ -527,14 +650,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       );
       return { ok: true, user: cleanUser };
     },
+    [addToast, mergeGuestCartIntoUser]
+  );
+
+  const loginWithGoogle = useCallback(
+    async (redirectPath = '/account'): Promise<{ ok: boolean; error?: string }> => {
+      const res = await startSupabaseGoogleSignIn(redirectPath);
+      if (!res.ok) {
+        addToast('Google Sign-In unavailable', res.error || 'Please configure Supabase Google Auth.', 'info');
+      }
+      return res;
+    },
     [addToast]
   );
 
   const loginAsDemoCustomer = useCallback(() => {
+    mergeGuestCartIntoUser(DEMO_CUSTOMER.id);
     storeService.setCurrentUser(DEMO_CUSTOMER);
     setUser(DEMO_CUSTOMER);
     addToast('Signed in as Ananya Deshmukh', 'Demo customer account active', 'success');
-  }, [addToast]);
+  }, [addToast, mergeGuestCartIntoUser]);
 
   const loginAsDemoOwner = useCallback(() => {
     storeService.setCurrentUser(DEMO_OWNER);
@@ -561,12 +696,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         joinedAt: new Date().toISOString().split('T')[0],
         role: 'customer',
       };
+      mergeGuestCartIntoUser(newUser.id);
       storeService.registerUser(newUser, data.password);
       setUser(newUser);
       addToast('Welcome to varniks_atelier', 'Your customer studio account is ready.', 'success');
       return { ok: true };
     },
-    [addToast]
+    [addToast, mergeGuestCartIntoUser]
   );
 
   const updateProfile = useCallback(
@@ -586,6 +722,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const logout = useCallback(() => {
+    void signOutBrowserSupabase();
     storeService.setCurrentUser(null);
     setUser(null);
     addToast('Signed out', 'See you again soon at the studio.', 'info');
@@ -839,12 +976,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         customerName?: string;
         paymentMethod: PaymentMethod;
         paymentReference?: string;
-      }
+      },
+      initialOrderStatus: OrderStatus = 'Pending'
     ): Order | null => {
       const addr = checkoutInput?.shippingAddress;
       const email = (checkoutInput?.customerEmail || req.email || '').trim();
       const name = (checkoutInput?.customerName || addr?.fullName || req.customerName || '').trim();
+      const resolvedCustomerId =
+        userId || (req.customerId && req.customerId !== 'guest' ? req.customerId : '');
       if (
+        !resolvedCustomerId ||
         !addr ||
         !addr.fullName.trim() ||
         !addr.phone.trim() ||
@@ -871,7 +1012,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return {
         id: `ord-custom-${Date.now()}`,
         orderNumber: `VA-CUST-${num}`,
-        customerId: req.customerId ?? userId ?? 'guest',
+        customerId: resolvedCustomerId,
         customerName: name,
         customerEmail: email,
         date: new Date().toISOString().split('T')[0],
@@ -891,7 +1032,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         total: price + fee,
         paymentMethod: checkoutInput?.paymentMethod ?? 'razorpay',
         paymentStatus: 'Paid',
-        orderStatus: 'Confirmed',
+        orderStatus: initialOrderStatus,
         shippingAddress: {
           fullName: addr.fullName.trim(),
           phone: addr.phone.trim(),
@@ -923,13 +1064,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         paymentReference?: string;
       }
     ): Order | null => {
+      if (!user) {
+        addToast(
+          'Sign in required',
+          'Please sign in to confirm your custom order and track delivery.',
+          'error'
+        );
+        return null;
+      }
       const existing = commissions.find((c) => c.id === id);
       if (!existing) return null;
       if (existing.orderCreated && existing.linkedOrderId) {
         return allOrders.find((o) => o.id === existing.linkedOrderId) ?? null;
       }
 
-      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput);
+      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput, 'Pending');
       if (!newOrder) {
         addToast(
           'Complete shipping & payment details required',
@@ -944,6 +1093,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const updatedReq: CommissionRequest = {
         ...existing,
+        customerId: user.id,
         customerApproved: true,
         orderCreated: true,
         linkedOrderId: newOrder.id,
@@ -963,10 +1113,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         body: JSON.stringify(updatedReq),
       }).catch(() => {});
 
-      addToast('Custom Order Confirmed & Created', `Continuous Order ${newOrder.orderNumber}`, 'success');
+      addToast('Custom Order Placed (Awaiting Studio Confirmation)', `Order ${newOrder.orderNumber}`, 'success');
       return newOrder;
     },
-    [addToast, allOrders, buildOrderFromCustomRequest, commissions]
+    [addToast, allOrders, buildOrderFromCustomRequest, commissions, user]
   );
 
   const createContinuousOrderFromCustomRequest = useCallback(
@@ -986,7 +1136,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return allOrders.find((o) => o.id === existing.linkedOrderId) ?? null;
       }
 
-      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput);
+      const newOrder = buildOrderFromCustomRequest(existing, checkoutInput, 'Confirmed');
       if (!newOrder) {
         addToast(
           'Customer delivery address required',
@@ -1180,7 +1330,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customerName?: string;
       paymentReference?: string;
       discount?: number;
-    }): Order => {
+    }): Order | null => {
+      if (!user || !userId) {
+        addToast(
+          'Sign in required',
+          'Please log in before placing an order so you can track delivery.',
+          'error'
+        );
+        return null;
+      }
+
+      const resolvedEmail = (customerEmail ?? user.email ?? '').trim();
+      if (
+        !resolvedEmail ||
+        !shippingAddress.fullName?.trim() ||
+        !shippingAddress.phone?.trim() ||
+        !shippingAddress.addressLine?.trim() ||
+        !shippingAddress.city?.trim() ||
+        !shippingAddress.state?.trim() ||
+        !shippingAddress.postalCode?.trim()
+      ) {
+        addToast(
+          'Shipping address required',
+          'Please complete all delivery address & contact fields before placing your order.',
+          'error'
+        );
+        return null;
+      }
+
       const orderItems = cart
         .map((item) => {
           const product = getProductById(item.productId);
@@ -1195,6 +1372,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
         })
         .filter((x): x is NonNullable<typeof x> => x !== null);
+
+      if (orderItems.length === 0) {
+        addToast('Your studio bag is empty', 'Add a creation before checking out.', 'error');
+        return null;
+      }
 
       const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
       const fee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
@@ -1212,9 +1394,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const newOrder: Order = {
         id: `ord-${Date.now()}`,
         orderNumber: `VA-2026-${num}`,
-        customerId: userId ?? 'guest',
-        customerName: customerName ?? user?.fullName ?? shippingAddress.fullName,
-        customerEmail: customerEmail ?? user?.email ?? 'customer@example.com',
+        customerId: userId,
+        customerName: (customerName ?? user.fullName ?? shippingAddress.fullName).trim(),
+        customerEmail: resolvedEmail,
         date: new Date().toISOString().split('T')[0],
         items: orderItems,
         subtotal,
@@ -1224,7 +1406,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         paymentMethod,
         paymentStatus: 'Paid',
         orderStatus: 'Pending',
-        shippingAddress,
+        shippingAddress: {
+          fullName: shippingAddress.fullName.trim(),
+          phone: shippingAddress.phone.trim(),
+          addressLine: shippingAddress.addressLine.trim(),
+          city: shippingAddress.city.trim(),
+          state: shippingAddress.state.trim(),
+          postalCode: shippingAddress.postalCode.trim(),
+          country: (shippingAddress.country || 'India').trim(),
+        },
         trackingCode: `VA-TRK-${num}`,
         courierName: 'Blue Dart Express',
         estimatedDelivery,
@@ -1246,7 +1436,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       clearCart();
       return newOrder;
     },
-    [cart, clearCart, getProductById, recordCartHistory, user, userId]
+    [addToast, cart, clearCart, getProductById, recordCartHistory, user, userId]
   );
 
   const addRecentSearch = useCallback((query: string) => {
@@ -1310,6 +1500,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addToast,
         dismissToast,
         loginWithCredentials,
+        loginWithGoogle,
+        googleAuthAvailable,
+        authSyncing,
         loginAsDemoCustomer,
         loginAsDemoOwner,
         registerCustomer,

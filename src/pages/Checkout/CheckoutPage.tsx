@@ -9,6 +9,7 @@ import {
   Check,
   Sparkles,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import type { PaymentMethod } from '../../types';
 import { useStore } from '../../context/StoreContext';
@@ -20,9 +21,35 @@ import { ResilientImage } from '../../components/common/ResilientImage';
 import { CheckoutStepper } from '../../components/checkout/CheckoutStepper';
 import { OrderSummary } from '../../components/checkout/OrderSummary';
 
+const CHECKOUT_DISCOUNT_STORAGE_KEY = 'varniks_checkout_discount';
+
+const GoogleMark: React.FC = () => (
+  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.08 3.56-5.15 3.56-8.65z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.87-3c-1.07.72-2.44 1.15-4.06 1.15-3.12 0-5.77-2.11-6.72-4.95H1.29v3.1A12 12 0 0 0 12 24z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.28 14.29A7.22 7.22 0 0 1 4.9 12c0-.79.14-1.56.38-2.29V6.61H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.39l3.99-3.1z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.76c1.76 0 3.34.61 4.58 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.61l3.99 3.1c.95-2.84 3.6-4.95 6.72-4.95z"
+    />
+  </svg>
+);
+
 export const CheckoutPage: React.FC = () => {
   const {
     user,
+    authSyncing,
+    loginWithGoogle,
+    googleAuthAvailable,
     cart,
     cartSubtotal,
     shippingFee,
@@ -41,7 +68,17 @@ export const CheckoutPage: React.FC = () => {
     ? commissions.find((c) => c.id === customRequestId)
     : undefined;
 
-  const discountFromCart = (location.state as { discount?: number } | null)?.discount ?? 0;
+  const stateDiscount = (location.state as { discount?: number } | null)?.discount;
+  const discountFromCart = (() => {
+    if (typeof stateDiscount === 'number' && stateDiscount > 0) return stateDiscount;
+    try {
+      const stored = Number(sessionStorage.getItem(CHECKOUT_DISCOUNT_STORAGE_KEY) || 0);
+      return Number.isFinite(stored) && stored > 0 ? stored : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
   const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -64,12 +101,33 @@ export const CheckoutPage: React.FC = () => {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
   const [paymentRefInput, setPaymentRefInput] = useState('');
-  const [verifyConfirmed, setVerifyConfirmed] = useState(true);
+  const [verifyConfirmed, setVerifyConfirmed] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [simulateFailure, setSimulateFailure] = useState(false);
+  const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
+  const [gateAuthError, setGateAuthError] = useState('');
 
-  // Sync custom request contact details if loaded asynchronously
+  // Sync user, saved address, and custom request details after sign-in or async hydration
+  useEffect(() => {
+    if (user) {
+      setFullName((prev) => prev || defaultAddr?.fullName || user.fullName || '');
+      setEmail((prev) => prev || user.email || '');
+      setPhone((prev) => prev || defaultAddr?.phone || user.phone || '');
+    }
+  }, [user, defaultAddr?.fullName, defaultAddr?.phone]);
+
+  useEffect(() => {
+    if (defaultAddr && !addressLine && !city && !postalCode) {
+      setSelectedAddrId(defaultAddr.id);
+      setAddressLine(defaultAddr.addressLine);
+      setCity(defaultAddr.city);
+      setStateName(defaultAddr.state);
+      setPostalCode(defaultAddr.postalCode);
+      setCountry(defaultAddr.country || 'India');
+    }
+  }, [defaultAddr, addressLine, city, postalCode]);
+
   useEffect(() => {
     if (customRequest) {
       if (!fullName) setFullName(customRequest.customerName);
@@ -79,6 +137,102 @@ export const CheckoutPage: React.FC = () => {
   }, [customRequest, email, fullName, phone]);
 
   const isCustomCheckout = Boolean(customRequestId);
+  const currentCheckoutUrl = `${location.pathname}${location.search}`;
+
+  // Mandatory authentication gate before checkout, address confirmation, or payment
+  if (!user) {
+    return (
+      <PageTransition className="py-14 sm:py-16 px-4">
+        <div className="max-w-lg mx-auto bg-white border border-[#E7C7CC] rounded-3xl p-7 sm:p-9 shadow-warm space-y-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-[#6D1836]/10 text-[#6D1836] flex items-center justify-center mx-auto">
+            {authSyncing ? (
+              <Loader2 className="w-7 h-7 animate-spin" />
+            ) : (
+              <Lock className="w-6 h-6" />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl sm:text-3xl font-medium text-[#3E2F27]">
+              {authSyncing
+                ? 'Verifying Your Studio Account...'
+                : 'Sign In Required to Complete Checkout'}
+            </h1>
+            <p className="text-sm text-[#7A655C] leading-relaxed">
+              {authSyncing
+                ? 'Please wait a moment while we restore your signed-in session and bag.'
+                : 'Login is mandatory before confirming any studio or custom order so your delivery address, payment verification, and tracking stay safely linked to your account.'}
+            </p>
+          </div>
+
+          {!authSyncing && (
+            <div className="space-y-3 pt-1">
+              {gateAuthError && (
+                <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5 text-left">
+                  {gateAuthError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                disabled={googleAuthLoading}
+                onClick={async () => {
+                  setGateAuthError('');
+                  setGoogleAuthLoading(true);
+                  const res = await loginWithGoogle(currentCheckoutUrl);
+                  if (!res.ok) {
+                    setGoogleAuthLoading(false);
+                    setGateAuthError(res.error || 'Could not start Google Sign-In.');
+                  }
+                }}
+                className="w-full py-3 px-5 rounded-xl bg-white hover:bg-[#FFF9F5] border border-[#E7C7CC] hover:border-[#6D1836] text-sm font-medium text-[#3E2F27] inline-flex items-center justify-center gap-2.5 transition-colors disabled:opacity-60"
+              >
+                {googleAuthLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#6D1836]" />
+                ) : (
+                  <GoogleMark />
+                )}
+                <span>{googleAuthLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+              </button>
+
+              {!googleAuthAvailable && (
+                <p className="text-[11px] text-[#7A655C]">
+                  Google Sign-In activates once <span className="font-mono">SUPABASE_ANON_KEY</span> is configured.
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(currentCheckoutUrl)}`}
+                  state={{ from: currentCheckoutUrl, discount: discountFromCart }}
+                  className="py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors text-center"
+                >
+                  Sign In with Email
+                </Link>
+                <Link
+                  to={`/register?redirect=${encodeURIComponent(currentCheckoutUrl)}`}
+                  state={{ from: currentCheckoutUrl, discount: discountFromCart }}
+                  className="py-3 px-5 rounded-xl border border-[#E7C7CC] hover:border-[#6D1836] text-[#3E2F27] text-sm font-medium transition-colors text-center"
+                >
+                  Create Account
+                </Link>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  to={isCustomCheckout ? '/custom-orders' : '/cart'}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[#7A655C] hover:text-[#6D1836]"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>{isCustomCheckout ? 'Return to Custom Orders' : 'Return to Studio Bag'}</span>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </PageTransition>
+    );
+  }
 
   if (isCustomCheckout && !customRequest) {
     return (
@@ -221,8 +375,29 @@ export const CheckoutPage: React.FC = () => {
   };
 
   const handlePayNow = () => {
+    if (!user) {
+      setPaymentError('Please sign in to place and track your order.');
+      return;
+    }
+
+    if (
+      !fullName.trim() ||
+      !email.trim() ||
+      !phone.trim() ||
+      !addressLine.trim() ||
+      !city.trim() ||
+      !stateName.trim() ||
+      !postalCode.trim()
+    ) {
+      setStep(1);
+      setFormError(
+        'Please complete your delivery address (Name, Email, Phone, Street Address, City, State & PIN Code) before confirming your order.'
+      );
+      return;
+    }
+
     if (!verifyConfirmed) {
-      setPaymentError('Please confirm your delivery address and authorize payment to continue.');
+      setPaymentError('Please verify your delivery address and tick the confirmation box to submit your order.');
       return;
     }
     setPaymentError('');
@@ -260,10 +435,15 @@ export const CheckoutPage: React.FC = () => {
         });
         setProcessing(false);
         if (order) {
+          try {
+            sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
+          } catch {
+            // ignore
+          }
           navigate('/order-success', { state: { order } });
         } else {
           setStep(1);
-          setFormError('Please ensure all shipping details are filled in.');
+          setFormError('Please make sure you are signed in and all shipping details are filled in.');
         }
         return;
       }
@@ -278,7 +458,17 @@ export const CheckoutPage: React.FC = () => {
       });
 
       setProcessing(false);
-      navigate('/order-success', { state: { order } });
+      if (order) {
+        try {
+          sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        navigate('/order-success', { state: { order } });
+      } else {
+        setStep(1);
+        setFormError('Unable to submit order. Please ensure you are signed in with a complete delivery address.');
+      }
     }, 950);
   };
 
@@ -707,7 +897,7 @@ export const CheckoutPage: React.FC = () => {
                         <span>Authorizing {paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'}...</span>
                       </>
                     ) : (
-                      <span>Pay {formatINR(totalPayable)} &amp; Place Order</span>
+                      <span>Submit Order ({formatINR(totalPayable)}) for Studio Confirmation</span>
                     )}
                   </button>
                 </div>

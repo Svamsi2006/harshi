@@ -295,12 +295,14 @@ const AppShell: React.FC = () => {
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
-      <StoreProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <AppShell />
-        </BrowserRouter>
-      </StoreProvider>
+      <StudioErrorBoundary>
+        <StoreProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <AppShell />
+          </BrowserRouter>
+        </StoreProvider>
+      </StudioErrorBoundary>
     </MotionConfig>
   );
 }

@@ -1,9 +1,33 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, CheckCircle2, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, CheckCircle2, Sparkles, Loader2, ShieldCheck } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { sanitizeRedirectPath } from '../../lib/supabaseAuth';
 import { PageTransition } from '../../components/common/PageTransition';
 import { BrandLogo } from '../../components/common/BrandLogo';
+
+const CHECKOUT_DISCOUNT_STORAGE_KEY = 'varniks_checkout_discount';
+
+const GoogleMark: React.FC = () => (
+  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.08 3.56-5.15 3.56-8.65z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.87-3c-1.07.72-2.44 1.15-4.06 1.15-3.12 0-5.77-2.11-6.72-4.95H1.29v3.1A12 12 0 0 0 12 24z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.28 14.29A7.22 7.22 0 0 1 4.9 12c0-.79.14-1.56.38-2.29V6.61H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.39l3.99-3.1z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 4.76c1.76 0 3.34.61 4.58 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.61l3.99 3.1c.95-2.84 3.6-4.95 6.72-4.95z"
+    />
+  </svg>
+);
 
 const AuthShell: React.FC<{
   title: string;
@@ -27,15 +51,80 @@ const AuthShell: React.FC<{
 const inputClass =
   'w-full px-3.5 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm text-[#3E2F27] focus:outline-none focus:border-[#6D1836]';
 
+function resolveRedirectTarget(
+  searchParams: URLSearchParams,
+  locationState: { from?: string; discount?: number } | null
+): string {
+  const fromQuery = searchParams.get('redirect');
+  if (fromQuery) return sanitizeRedirectPath(fromQuery, '/account');
+  if (locationState?.from) return sanitizeRedirectPath(locationState.from, '/account');
+  try {
+    const saved = sessionStorage.getItem('varniks_post_auth_redirect');
+    if (saved) return sanitizeRedirectPath(saved, '/account');
+  } catch {
+    // ignore
+  }
+  return '/account';
+}
+
 export const LoginPage: React.FC = () => {
-  const { loginWithCredentials, loginAsDemoCustomer } = useStore();
+  const {
+    user,
+    authSyncing,
+    loginWithCredentials,
+    loginAsDemoCustomer,
+    loginWithGoogle,
+    googleAuthAvailable,
+  } = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const navState = (location.state as { from?: string; discount?: number } | null) ?? null;
+  const redirectTarget = resolveRedirectTarget(searchParams, navState);
+  const isCheckoutRedirect = redirectTarget.startsWith('/checkout');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Persist discount across full-page OAuth redirect if coming from Cart
+  useEffect(() => {
+    if (typeof navState?.discount === 'number' && navState.discount > 0) {
+      try {
+        sessionStorage.setItem(CHECKOUT_DISCOUNT_STORAGE_KEY, String(navState.discount));
+      } catch {
+        // ignore
+      }
+    }
+  }, [navState?.discount]);
+
+  // Auto-redirect when already signed in or returning from Supabase Google OAuth callback
+  useEffect(() => {
+    if (!user) return;
+    try {
+      sessionStorage.removeItem('varniks_post_auth_redirect');
+    } catch {
+      // ignore
+    }
+    const target = user.role === 'owner' && redirectTarget === '/account' ? '/admin' : redirectTarget;
+    navigate(target, {
+      replace: true,
+      state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
+    });
+  }, [user, navigate, redirectTarget, navState?.discount]);
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setGoogleLoading(true);
+    const res = await loginWithGoogle(redirectTarget);
+    if (!res.ok) {
+      setGoogleLoading(false);
+      setError(res.error || 'Could not start Google Sign-In.');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,18 +137,74 @@ export const LoginPage: React.FC = () => {
       setError(res.error || 'Unable to sign in.');
       return;
     }
-    if (res.user?.role === 'owner') {
+    try {
+      sessionStorage.removeItem('varniks_post_auth_redirect');
+    } catch {
+      // ignore
+    }
+    if (res.user?.role === 'owner' && redirectTarget === '/account') {
       navigate('/admin');
     } else {
-      navigate('/account');
+      navigate(redirectTarget, {
+        state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
+      });
     }
   };
 
   return (
     <AuthShell
       title="Welcome Back"
-      subtitle="Sign in to view your saved artworks, orders, and studio bag."
+      subtitle={
+        isCheckoutRedirect
+          ? 'Sign in to enter your delivery address, complete checkout, and track your order.'
+          : 'Sign in to view your saved artworks, orders, and studio bag.'
+      }
     >
+      {authSyncing && (
+        <div className="flex items-center justify-center gap-2 text-xs font-medium text-[#6D1836] bg-[#FFF9F5] border border-[#E7C7CC] rounded-xl px-4 py-3">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Completing your Google sign-in...</span>
+        </div>
+      )}
+
+      {isCheckoutRedirect && !authSyncing && (
+        <div className="flex items-start gap-2.5 text-xs text-[#3E2F27] bg-[#F8EFEA] border border-[#E7C7CC] rounded-xl px-3.5 py-3">
+          <ShieldCheck className="w-4 h-4 text-[#6D1836] shrink-0 mt-0.5" />
+          <span>
+            Login is required before placing an order so your bag, delivery address, and tracking updates stay linked to your account.
+          </span>
+        </div>
+      )}
+
+      {/* Supabase Google Sign-In */}
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => void handleGoogleSignIn()}
+          disabled={googleLoading || authSyncing}
+          className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-[#FFF9F5] border border-[#E7C7CC] hover:border-[#6D1836] text-sm font-medium text-[#3E2F27] inline-flex items-center justify-center gap-2.5 shadow-xs transition-colors disabled:opacity-60"
+        >
+          {googleLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-[#6D1836]" />
+          ) : (
+            <GoogleMark />
+          )}
+          <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+        </button>
+
+        {!googleAuthAvailable && (
+          <p className="text-[11px] text-center text-[#7A655C]">
+            Studio Admin: add <span className="font-mono">SUPABASE_ANON_KEY</span> &amp; enable Google in Supabase Auth to activate one-click Google Sign-In.
+          </p>
+        )}
+
+        <div className="relative flex items-center py-1">
+          <div className="flex-1 border-t border-[#E7C7CC]" />
+          <span className="px-3 text-[11px] uppercase tracking-wider text-[#7A655C]">or with email</span>
+          <div className="flex-1 border-t border-[#E7C7CC]" />
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
@@ -127,7 +272,7 @@ export const LoginPage: React.FC = () => {
           type="submit"
           className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
         >
-          Sign In
+          {isCheckoutRedirect ? 'Sign In & Continue to Checkout' : 'Sign In'}
         </button>
       </form>
 
@@ -136,7 +281,10 @@ export const LoginPage: React.FC = () => {
           type="button"
           onClick={() => {
             loginAsDemoCustomer();
-            navigate('/account');
+            navigate(redirectTarget, {
+              state:
+                typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
+            });
           }}
           className="w-full py-2.5 px-4 rounded-xl bg-[#F8EFEA] hover:bg-[#E7C7CC] text-xs font-medium text-[#3E2F27] inline-flex items-center justify-center gap-1.5 transition-colors"
         >
@@ -155,7 +303,15 @@ export const LoginPage: React.FC = () => {
 
         <p className="text-center text-xs text-[#7A655C]">
           New to varniks_atelier?{' '}
-          <Link to="/register" className="font-semibold text-[#6D1836] hover:text-[#541129]">
+          <Link
+            to={
+              redirectTarget !== '/account'
+                ? `/register?redirect=${encodeURIComponent(redirectTarget)}`
+                : '/register'
+            }
+            state={navState ?? undefined}
+            className="font-semibold text-[#6D1836] hover:text-[#541129]"
+          >
             Create an account
           </Link>
         </p>
@@ -165,8 +321,12 @@ export const LoginPage: React.FC = () => {
 };
 
 export const RegisterPage: React.FC = () => {
-  const { registerCustomer } = useStore();
+  const { user, registerCustomer, loginWithGoogle, authSyncing } = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const navState = (location.state as { from?: string; discount?: number } | null) ?? null;
+  const redirectTarget = resolveRedirectTarget(searchParams, navState);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -175,6 +335,25 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    navigate(redirectTarget, {
+      replace: true,
+      state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
+    });
+  }, [user, navigate, redirectTarget, navState?.discount]);
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setGoogleLoading(true);
+    const res = await loginWithGoogle(redirectTarget);
+    if (!res.ok) {
+      setGoogleLoading(false);
+      setError(res.error || 'Could not start Google Sign-In.');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +374,14 @@ export const RegisterPage: React.FC = () => {
       setError(res.error || 'Could not register.');
       return;
     }
-    navigate('/account');
+    try {
+      sessionStorage.removeItem('varniks_post_auth_redirect');
+    } catch {
+      // ignore
+    }
+    navigate(redirectTarget, {
+      state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
+    });
   };
 
   return (
@@ -203,6 +389,28 @@ export const RegisterPage: React.FC = () => {
       title="Create Your Account"
       subtitle="Join our collector circle for order tracking, saved addresses & wishlists."
     >
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => void handleGoogleSignIn()}
+          disabled={googleLoading || authSyncing}
+          className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-[#FFF9F5] border border-[#E7C7CC] hover:border-[#6D1836] text-sm font-medium text-[#3E2F27] inline-flex items-center justify-center gap-2.5 shadow-xs transition-colors disabled:opacity-60"
+        >
+          {googleLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-[#6D1836]" />
+          ) : (
+            <GoogleMark />
+          )}
+          <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+        </button>
+
+        <div className="relative flex items-center py-1">
+          <div className="flex-1 border-t border-[#E7C7CC]" />
+          <span className="px-3 text-[11px] uppercase tracking-wider text-[#7A655C]">or register with email</span>
+          <div className="flex-1 border-t border-[#E7C7CC]" />
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p className="text-xs text-[#541129] bg-[#6D1836]/10 border border-[#6D1836]/25 rounded-xl px-3.5 py-2.5">
@@ -281,13 +489,23 @@ export const RegisterPage: React.FC = () => {
           type="submit"
           className="w-full py-3 px-5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-white text-sm font-medium transition-colors"
         >
-          Create Account
+          {redirectTarget.startsWith('/checkout')
+            ? 'Create Account & Continue to Checkout'
+            : 'Create Account'}
         </button>
       </form>
 
       <p className="text-center text-xs text-[#7A655C] pt-2 border-t border-[#E7C7CC]">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-[#6D1836] hover:text-[#541129]">
+        <Link
+          to={
+            redirectTarget !== '/account'
+              ? `/login?redirect=${encodeURIComponent(redirectTarget)}`
+              : '/login'
+          }
+          state={navState ?? undefined}
+          className="font-semibold text-[#6D1836] hover:text-[#541129]"
+        >
           Sign in
         </Link>
       </p>

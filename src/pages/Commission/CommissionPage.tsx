@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Upload,
@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Eye,
   Loader2,
+  Lock,
 } from 'lucide-react';
 import { STUDIO_MEDIA } from '../../data/studioImages';
 import { useStore } from '../../context/StoreContext';
@@ -52,6 +53,7 @@ const PREDICTED_RANGES = [
 export const CommissionPage: React.FC = () => {
   const {
     user,
+    loginWithGoogle,
     categories,
     commissions,
     createCustomOrderRequest,
@@ -107,8 +109,20 @@ export const CommissionPage: React.FC = () => {
     return PREDICTED_RANGES.find((r) => r.label === selectedRange)?.estimate ?? 1599;
   }, [customPriceInput, priceMode, selectedRange]);
 
+  useEffect(() => {
+    if (user) {
+      setCustomerName((prev) => prev || user.fullName || '');
+      setEmail((prev) => prev || user.email || '');
+      setPhone((prev) => prev || user.phone || '');
+    }
+  }, [user]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setError('Please sign in first so we can link and track your custom order request.');
+      return;
+    }
     if (!customerName.trim() || !email.trim() || !phone.trim() || !customIdea.trim()) {
       setError('Please fill in your contact details and your custom idea.');
       return;
@@ -124,7 +138,7 @@ export const CommissionPage: React.FC = () => {
 
     setError('');
     const created = createCustomOrderRequest({
-      customerId: user?.id ?? 'guest',
+      customerId: user.id,
       customerName: customerName.trim(),
       email: email.trim(),
       phone: phone.trim(),
@@ -557,12 +571,38 @@ export const CommissionPage: React.FC = () => {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3.5 px-6 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-sm font-medium shadow-warm transition-colors"
-                >
-                  Submit to Custom Order Waiting List
-                </button>
+                {!user ? (
+                  <div className="p-4 rounded-xl bg-[#F8EFEA] border border-[#E7C7CC] space-y-3">
+                    <div className="flex items-start gap-2.5 text-xs text-[#3E2F27]">
+                      <Lock className="w-4 h-4 text-[#6D1836] shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Sign in required:</strong> Please log in before submitting a custom order so we can notify you when your quote is approved and track your delivery.
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => void loginWithGoogle('/custom-orders')}
+                        className="px-4 py-2 rounded-xl bg-white border border-[#E7C7CC] hover:border-[#6D1836] text-xs font-medium text-[#3E2F27] transition-colors"
+                      >
+                        Continue with Google
+                      </button>
+                      <Link
+                        to="/login?redirect=%2Fcustom-orders"
+                        className="px-4 py-2 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-xs font-medium transition-colors"
+                      >
+                        Sign In with Email
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 px-6 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-sm font-medium shadow-warm transition-colors"
+                  >
+                    Submit to Custom Order Waiting List
+                  </button>
+                )}
               </form>
             )}
           </div>
@@ -737,11 +777,21 @@ export const CommissionPage: React.FC = () => {
                       </Link>
                     ) : req.adminApproved ? (
                       <Link
-                        to={`/checkout?customRequestId=${encodeURIComponent(req.id)}`}
+                        to={
+                          user
+                            ? `/checkout?customRequestId=${encodeURIComponent(req.id)}`
+                            : `/login?redirect=${encodeURIComponent(
+                                `/checkout?customRequestId=${req.id}`
+                              )}`
+                        }
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-xs font-medium transition-colors"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Approve &amp; Complete Checkout →</span>
+                        <span>
+                          {user
+                            ? 'Enter Address & Confirm Checkout →'
+                            : 'Sign In to Confirm & Checkout →'}
+                        </span>
                       </Link>
                     ) : (
                       <span className="text-[11px] text-[#7A655C]">
