@@ -109,23 +109,24 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; title: string }>
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </Link>
 
-          <div className="flex items-center justify-between pt-2 px-1">
+          <div className="flex items-center justify-between pt-2 px-1 gap-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-[#3E2F27] truncate">
                 {user?.fullName ?? 'Studio Owner'}
               </p>
               <p className="text-[11px] text-[#7A655C] truncate">{user?.email}</p>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-2 text-[#7A655C] hover:text-[#6D1836] rounded-lg transition-colors"
-              title="Logout"
-              aria-label="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#6D1836] hover:bg-[#541129] text-[#FFF9F5] text-xs font-semibold transition-colors"
+            title="Sign out of Admin Studio"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout Admin</span>
+          </button>
         </div>
       </aside>
 
@@ -138,7 +139,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; title: string }>
               {title}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <Link
               to="/admin/settings"
               className={`hidden sm:inline-block text-xs font-medium px-3 py-1.5 rounded-xl border ${
@@ -151,6 +152,15 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; title: string }>
                 ? 'Supabase PostgreSQL Synced'
                 : 'Local Mode • Setup Supabase SQL'}
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#E7C7CC] bg-white hover:border-[#6D1836] hover:text-[#6D1836] text-xs font-semibold text-[#3E2F27] transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </button>
           </div>
         </header>
 

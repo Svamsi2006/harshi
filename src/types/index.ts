@@ -172,13 +172,23 @@ export interface CommissionRequest {
   submittedAt: string;
 }
 
+export interface ShippingZone {
+  id: string;
+  name: string;
+  description: string;
+  fee: number;
+  eta: string;
+  states?: string[];
+}
+
 export interface Coupon {
   id: string;
   code: string;
-  discountType: 'percentage' | 'fixed';
+  discountType: 'percentage' | 'fixed' | 'free_shipping';
   discountValue: number;
   minimumOrder: number;
   isActive: boolean;
+  autoApply?: boolean;
   expiresAt?: string;
 }
 
@@ -195,6 +205,14 @@ export interface StoreSettings {
   openrouterModel?: string;
   hasOpenrouterKey?: boolean;
   openrouterKeyMasked?: string;
+  studioOriginState?: string;
+  shippingZones?: ShippingZone[];
+  razorpayKeyId?: string;
+  hasRazorpayKey?: boolean;
+  razorpaySecretMasked?: string;
+  razorpayMode?: 'live' | 'test' | 'unconfigured';
+  gaMeasurementId?: string;
+  googleSiteVerification?: string;
 }
 
 export interface FilterState {

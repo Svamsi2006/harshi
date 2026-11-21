@@ -19,6 +19,8 @@ import { DEMO_CUSTOMER, DEMO_OWNER, storeService } from '../services/storeServic
 import { PRODUCTS as DEFAULT_PRODUCTS } from '../data/products';
 import { STUDIO_MEDIA } from '../data/studioImages';
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '../utils/format';
+import { calculateLocationShipping } from '../utils/shipping';
+import { isAdminEmail } from '../utils/admin';
 import {
   getBrowserSupabaseClient,
   getPublicAuthConfig,
@@ -56,6 +58,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
 interface StoreContextValue {
   user: CustomerUser | null;
   isAdmin: boolean;
+  adminPinUnlocked: boolean;
+  unlockAdminPortal: (token: string) => void;
+  lockAdminPortal: () => void;
   categories: CategoryItem[];
   products: Product[];
   cart: CartItem[];
@@ -136,6 +141,7 @@ interface StoreContextValue {
       customerName?: string;
       paymentMethod: PaymentMethod;
       paymentReference?: string;
+      shippingFeeOverride?: number;
     }
   ) => Order | null;
   createContinuousOrderFromCustomRequest: (
@@ -146,11 +152,14 @@ interface StoreContextValue {
       customerName?: string;
       paymentMethod: PaymentMethod;
       paymentReference?: string;
+      shippingFeeOverride?: number;
     }
   ) => Order | null;
 
   saveCoupons: (coupons: Coupon[]) => void;
-  saveStoreSettings: (settings: StoreSettings & { openrouterApiKey?: string }) => Promise<void>;
+  saveStoreSettings: (
+    settings: StoreSettings & { openrouterApiKey?: string; razorpayKeySecret?: string }
+  ) => Promise<void>;
 
   addToCart: (productId: string, quantity?: number, openDrawer?: boolean) => boolean;
   updateCartQuantity: (productId: string, quantity: number) => void;
@@ -173,6 +182,7 @@ interface StoreContextValue {
     customerName?: string;
     paymentReference?: string;
     discount?: number;
+    shippingFeeOverride?: number;
   }) => Order | null;
 
   addRecentSearch: (query: string) => void;
@@ -184,7 +194,20 @@ const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<CustomerUser | null>(() => storeService.getCurrentUser());
   const userId = user?.id ?? null;
-  const isAdmin = user?.role === 'owner';
+  const isAdmin = Boolean(user && (user.role === 'owner' || isAdminEmail(user.email)));
+  const [adminPinUnlocked, setAdminPinUnlocked] = useState(false);
+  const [, setAdminUnlockToken] = useState<string | null>(null);
+
+  const unlockAdminPortal = useCallback((token: string) => {
+    if (!token) return;
+    setAdminUnlockToken(token);
+    setAdminPinUnlocked(true);
+  }, []);
+
+  const lockAdminPortal = useCallback(() => {
+    setAdminUnlockToken(null);
+    setAdminPinUnlocked(false);
+  }, []);
 
   const [categories, setCategories] = useState<CategoryItem[]>(() => storeService.getCategories());
   const [products, setProducts] = useState<Product[]>(() => storeService.getProducts());
@@ -370,7 +393,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         let syncedUser: CustomerUser | null = null;
         if (res.ok && json?.ok && json.user) {
-          syncedUser = json.user as CustomerUser;
+          const serverUser = json.user as CustomerUser;
+          syncedUser = isAdminEmail(serverUser.email)
+            ? { ...serverUser, role: 'owner' }
+            : serverUser;
         } else if (fallbackUser?.email) {
           const meta = fallbackUser.user_metadata || {};
           const email = fallbackUser.email.trim().toLowerCase();
@@ -382,7 +408,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             joinedAt: fallbackUser.created_at
               ? String(fallbackUser.created_at).slice(0, 10)
               : new Date().toISOString().split('T')[0],
-            role: 'customer',
+            role: isAdminEmail(email) ? 'owner' : 'customer',
           };
         }
 
@@ -438,6 +464,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAddresses(storeService.getAddresses(userId));
     setAllOrders(storeService.getAllOrders());
     setCommissions(storeService.getCommissions());
+    setAdminPinUnlocked(false);
+    setAdminUnlockToken(null);
   }, [userId]);
 
   const dismissToast = useCallback((id: string) => {
@@ -688,18 +716,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (users.some((u) => u.email.toLowerCase() === data.email.trim().toLowerCase())) {
         return { ok: false, error: 'An account with this email already exists.' };
       }
+      const normalizedEmail = data.email.trim().toLowerCase();
       const newUser: CustomerUser = {
         id: `cust-${Date.now()}`,
         fullName: data.fullName.trim(),
-        email: data.email.trim().toLowerCase(),
+        email: normalizedEmail,
         phone: data.phone.trim(),
         joinedAt: new Date().toISOString().split('T')[0],
-        role: 'customer',
+        role: isAdminEmail(normalizedEmail) ? 'owner' : 'customer',
       };
       mergeGuestCartIntoUser(newUser.id);
       storeService.registerUser(newUser, data.password);
       setUser(newUser);
-      addToast('Welcome to varniks_atelier', 'Your customer studio account is ready.', 'success');
+      addToast(
+        'Welcome to varniks_atelier',
+        newUser.role === 'owner'
+          ? 'Your Studio Admin account is ready.'
+          : 'Your customer studio account is ready.',
+        'success'
+      );
       return { ok: true };
     },
     [addToast, mergeGuestCartIntoUser]
@@ -725,6 +760,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void signOutBrowserSupabase();
     storeService.setCurrentUser(null);
     setUser(null);
+    setAdminPinUnlocked(false);
+    setAdminUnlockToken(null);
     addToast('Signed out', 'See you again soon at the studio.', 'info');
   }, [addToast]);
 
@@ -976,6 +1013,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         customerName?: string;
         paymentMethod: PaymentMethod;
         paymentReference?: string;
+        shippingFeeOverride?: number;
       },
       initialOrderStatus: OrderStatus = 'Pending'
     ): Order | null => {
@@ -1000,7 +1038,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const num = Math.floor(2100 + Math.random() * 7800);
       const price = req.quotedPrice ?? req.predictedPrice ?? 1499;
-      const fee = price >= storeSettings.freeShippingThreshold ? 0 : storeSettings.defaultShippingFee;
+      const computedLoc = calculateLocationShipping({
+        country: addr.country,
+        state: addr.state,
+        city: addr.city,
+        postalCode: addr.postalCode,
+        subtotal: price,
+        zones: storeSettings.shippingZones,
+        originState: storeSettings.studioOriginState,
+        freeShippingThreshold: storeSettings.freeShippingThreshold,
+        coupons,
+      });
+      const fee =
+        typeof checkoutInput?.shippingFeeOverride === 'number'
+          ? Math.max(0, checkoutInput.shippingFeeOverride)
+          : computedLoc.finalFee;
       const estDate = new Date();
       estDate.setDate(estDate.getDate() + 8);
       const estimatedDelivery = new Intl.DateTimeFormat('en-IN', {
@@ -1050,7 +1102,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         paymentReference: checkoutInput?.paymentReference ?? `PAY-${num}`,
       };
     },
-    [storeSettings.defaultShippingFee, storeSettings.freeShippingThreshold, userId]
+    [
+      coupons,
+      storeSettings.freeShippingThreshold,
+      storeSettings.shippingZones,
+      storeSettings.studioOriginState,
+      userId,
+    ]
   );
 
   const approveCustomOrderByCustomerAndCreateOrder = useCallback(
@@ -1062,6 +1120,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         customerName?: string;
         paymentMethod: PaymentMethod;
         paymentReference?: string;
+        shippingFeeOverride?: number;
       }
     ): Order | null => {
       if (!user) {
@@ -1192,8 +1251,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const saveStoreSettings = useCallback(
-    async (settings: StoreSettings & { openrouterApiKey?: string }): Promise<void> => {
-      const { openrouterApiKey, ...safeClientSettings } = settings;
+    async (
+      settings: StoreSettings & { openrouterApiKey?: string; razorpayKeySecret?: string }
+    ): Promise<void> => {
+      const { openrouterApiKey, razorpayKeySecret, ...safeClientSettings } = settings;
       storeService.saveStoreSettings(safeClientSettings);
       setStoreSettings(safeClientSettings);
 
@@ -1216,11 +1277,40 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 ? json.openrouterKeyMasked
                 : safeClientSettings.openrouterKeyMasked,
             logoUrl: json.logoUrl !== undefined ? json.logoUrl : safeClientSettings.logoUrl,
+            razorpayKeyId:
+              json.razorpayKeyId !== undefined ? json.razorpayKeyId : safeClientSettings.razorpayKeyId,
+            hasRazorpayKey:
+              json.hasRazorpayKey !== undefined
+                ? Boolean(json.hasRazorpayKey)
+                : safeClientSettings.hasRazorpayKey,
+            razorpaySecretMasked:
+              json.razorpaySecretMasked !== undefined
+                ? json.razorpaySecretMasked
+                : safeClientSettings.razorpaySecretMasked,
+            razorpayMode:
+              json.razorpayMode !== undefined ? json.razorpayMode : safeClientSettings.razorpayMode,
+            studioOriginState:
+              json.studioOriginState !== undefined
+                ? json.studioOriginState
+                : safeClientSettings.studioOriginState,
+            shippingZones:
+              json.shippingZones !== undefined ? json.shippingZones : safeClientSettings.shippingZones,
+            gaMeasurementId:
+              json.gaMeasurementId !== undefined
+                ? json.gaMeasurementId
+                : safeClientSettings.gaMeasurementId,
+            googleSiteVerification:
+              json.googleSiteVerification !== undefined
+                ? json.googleSiteVerification
+                : safeClientSettings.googleSiteVerification,
           };
           storeService.saveStoreSettings(merged);
           setStoreSettings(merged);
-          if (openrouterApiKey && openrouterApiKey !== '__CLEAR__') {
-            addToast('Studio settings & OpenRouter key saved', undefined, 'success');
+          if (
+            (openrouterApiKey && openrouterApiKey !== '__CLEAR__') ||
+            (razorpayKeySecret && razorpayKeySecret !== '__CLEAR__')
+          ) {
+            addToast('Studio settings & live API credentials saved securely', undefined, 'success');
             return;
           }
         } else if (json?.error) {
@@ -1312,8 +1402,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const shippingFee = useMemo(() => {
     if (cartSubtotal === 0) return 0;
-    return cartSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
-  }, [cartSubtotal]);
+    const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
+    const calc = calculateLocationShipping({
+      country: defaultAddr?.country || 'India',
+      state: defaultAddr?.state,
+      city: defaultAddr?.city,
+      postalCode: defaultAddr?.postalCode,
+      subtotal: cartSubtotal,
+      zones: storeSettings.shippingZones,
+      originState: storeSettings.studioOriginState,
+      freeShippingThreshold: storeSettings.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD,
+      coupons,
+    });
+    return calc.finalFee;
+  }, [
+    addresses,
+    cartSubtotal,
+    coupons,
+    storeSettings.freeShippingThreshold,
+    storeSettings.shippingZones,
+    storeSettings.studioOriginState,
+  ]);
 
   const placeOrder = useCallback(
     ({
@@ -1323,6 +1432,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customerName,
       paymentReference,
       discount = 0,
+      shippingFeeOverride,
     }: {
       shippingAddress: Omit<Address, 'id' | 'isDefault'>;
       paymentMethod: PaymentMethod;
@@ -1330,6 +1440,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       customerName?: string;
       paymentReference?: string;
       discount?: number;
+      shippingFeeOverride?: number;
     }): Order | null => {
       if (!user || !userId) {
         addToast(
@@ -1379,7 +1490,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      const fee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+      const locCalc = calculateLocationShipping({
+        country: shippingAddress.country,
+        state: shippingAddress.state,
+        city: shippingAddress.city,
+        postalCode: shippingAddress.postalCode,
+        subtotal,
+        zones: storeSettings.shippingZones,
+        originState: storeSettings.studioOriginState,
+        freeShippingThreshold: storeSettings.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD,
+        coupons,
+      });
+      const fee =
+        typeof shippingFeeOverride === 'number'
+          ? Math.max(0, shippingFeeOverride)
+          : locCalc.finalFee ?? STANDARD_SHIPPING_FEE;
       const total = Math.max(0, subtotal + fee - discount);
       const num = Math.floor(1050 + Math.random() * 8900);
 
@@ -1472,6 +1597,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         user,
         isAdmin,
+        adminPinUnlocked,
+        unlockAdminPortal,
+        lockAdminPortal,
         categories,
         products,
         cart,

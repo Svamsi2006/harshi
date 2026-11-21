@@ -16,5 +16,5 @@ export function formatDate(dateString: string): string {
   }).format(date);
 }
 
-export const FREE_SHIPPING_THRESHOLD = 999;
-export const STANDARD_SHIPPING_FEE = 95;
+export const FREE_SHIPPING_THRESHOLD = 1000;
+export const STANDARD_SHIPPING_FEE = 99;

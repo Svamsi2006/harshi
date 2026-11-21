@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
@@ -285,6 +286,30 @@ interface ExtendedStudioConfig {
   chatbotEnabled: boolean;
   openrouterModel: string;
   openrouterApiKey: string;
+  razorpayKeyId: string;
+  razorpayKeySecret: string;
+  studioOriginState: string;
+  shippingZones?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    fee: number;
+    eta: string;
+    states?: string[];
+  }>;
+  freeShippingCoupons?: Array<{
+    id: string;
+    code: string;
+    discountType: 'free_shipping';
+    discountValue: number;
+    minimumOrder: number;
+    isActive: boolean;
+    autoApply?: boolean;
+    expiresAt?: string;
+  }>;
+  gaMeasurementId: string;
+  googleSiteVerification: string;
+  adminPinHash?: string;
 }
 
 interface ChatLogEntry {
@@ -303,16 +328,146 @@ const DEFAULT_EXTENDED_CONFIG: ExtendedStudioConfig = {
   chatbotEnabled: true,
   openrouterModel: 'openai/gpt-4o-mini',
   openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
+  studioOriginState: 'Maharashtra',
+  freeShippingCoupons: [
+    {
+      id: 'coup-freeship-1000',
+      code: 'FREESHIP1000',
+      discountType: 'free_shipping',
+      discountValue: 100,
+      minimumOrder: 1000,
+      isActive: true,
+      autoApply: true,
+    },
+  ],
+  gaMeasurementId: process.env.GA_MEASUREMENT_ID || process.env.VITE_GA_MEASUREMENT_ID || '',
+  googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || '',
 };
 
 let memoryExtendedConfig: ExtendedStudioConfig = { ...DEFAULT_EXTENDED_CONFIG };
 const chatLogs: ChatLogEntry[] = [];
+
+function getEffectiveRazorpayCredentials(cfg: ExtendedStudioConfig): {
+  keyId: string;
+  keySecret: string;
+  mode: 'live' | 'test' | 'unconfigured';
+} {
+  const keyId = (cfg.razorpayKeyId || process.env.RAZORPAY_KEY_ID || '').trim();
+  const keySecret = (cfg.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || '').trim();
+  const configured = Boolean(keyId && keySecret);
+  const mode: 'live' | 'test' | 'unconfigured' = !configured
+    ? 'unconfigured'
+    : keyId.startsWith('rzp_live_')
+      ? 'live'
+      : 'test';
+  return { keyId, keySecret, mode };
+}
 
 function maskApiKey(key: string): string {
   const clean = key.trim();
   if (!clean) return '';
   if (clean.length <= 10) return '••••••';
   return `${clean.slice(0, 7)}••••${clean.slice(-4)}`;
+}
+
+// Admin allowlist & salted scrypt PIN / recovery verification (strictly server-side)
+const DEFAULT_ADMIN_EMAILS = [
+  'seelamvamsisivaganesh@gmail.com',
+  'seelamharshi27@gmail.com',
+  'owner@varniksatelier.studio',
+];
+
+const DEFAULT_ADMIN_PIN_SCRYPT =
+  'scrypt$561ec8b3c3d06208a625cc168f1415ba$318670eea130f144dafe03ee59c037318b516fed9034746a7241d281a53e7a0c';
+const DEFAULT_ADMIN_PET_SCRYPT =
+  'scrypt$7efe5ba566eaa194e435389e84c165c1$3c9d767ad32002d7908f15c27c0d2ca294b0903db158fb02a669e707927bba45';
+
+const ADMIN_TOKEN_SIGNING_KEY =
+  process.env.ADMIN_SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+
+const pinRateLimiter = new Map<string, { attempts: number; resetAt: number }>();
+
+function getAllowedAdminEmails(): Set<string> {
+  const allowed = new Set<string>(DEFAULT_ADMIN_EMAILS);
+  const rawList = [process.env.ADMIN_EMAILS || '', process.env.STUDIO_OWNER_EMAIL || '']
+    .join(',')
+    .split(',');
+  for (const entry of rawList) {
+    const cleaned = entry.trim().toLowerCase();
+    if (cleaned) allowed.add(cleaned);
+  }
+  return allowed;
+}
+
+function isAllowedAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return getAllowedAdminEmails().has(email.trim().toLowerCase());
+}
+
+function hashAdminSecret(plain: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(plain, salt, 32).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyScryptHash(plain: string, stored: string): boolean {
+  const parts = stored.split('$');
+  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+  const [, salt, expectedHex] = parts;
+  if (!salt || !expectedHex) return false;
+  try {
+    const derived = crypto.scryptSync(plain, salt, 32);
+    const expected = Buffer.from(expectedHex, 'hex');
+    return derived.length === expected.length && crypto.timingSafeEqual(derived, expected);
+  } catch {
+    return false;
+  }
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
+function checkPinRateLimit(ip: string): { allowed: boolean; retryAfterSec?: number } {
+  const now = Date.now();
+  const entry = pinRateLimiter.get(ip);
+  if (!entry || now > entry.resetAt) {
+    pinRateLimiter.set(ip, { attempts: 0, resetAt: now + 10 * 60 * 1000 });
+    return { allowed: true };
+  }
+  if (entry.attempts >= 10) {
+    return { allowed: false, retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)) };
+  }
+  return { allowed: true };
+}
+
+function recordPinFailure(ip: string): void {
+  const now = Date.now();
+  const entry = pinRateLimiter.get(ip);
+  if (!entry || now > entry.resetAt) {
+    pinRateLimiter.set(ip, { attempts: 1, resetAt: now + 10 * 60 * 1000 });
+  } else {
+    entry.attempts += 1;
+  }
+}
+
+function clearPinFailures(ip: string): void {
+  pinRateLimiter.delete(ip);
+}
+
+function issueAdminUnlockToken(email: string): string {
+  const payload = Buffer.from(
+    JSON.stringify({ email: email.trim().toLowerCase(), iat: Date.now() })
+  ).toString('base64url');
+  const sig = crypto
+    .createHmac('sha256', ADMIN_TOKEN_SIGNING_KEY)
+    .update(payload)
+    .digest('base64url');
+  return `${payload}.${sig}`;
 }
 
 async function ensureStudioBucket() {
@@ -379,19 +534,28 @@ function recordChatLog(entry: ChatLogEntry) {
 
 function mapDbSettingsToApp(row: Record<string, any>, ext?: ExtendedStudioConfig) {
   const cfg = ext ?? memoryExtendedConfig;
+  const rzp = getEffectiveRazorpayCredentials(cfg);
   return {
     storeName: row.store_name,
     contactEmail: row.contact_email,
     contactPhone: row.contact_phone,
     currency: row.currency,
-    freeShippingThreshold: Number(row.free_shipping_threshold),
-    defaultShippingFee: Number(row.default_shipping_fee),
+    freeShippingThreshold: Number(row.free_shipping_threshold ?? 1000),
+    defaultShippingFee: Number(row.default_shipping_fee ?? 99),
     announcementText: row.announcement_text,
     logoUrl: row.logo_url ?? cfg.logoUrl ?? '',
     chatbotEnabled: row.chatbot_enabled !== undefined ? Boolean(row.chatbot_enabled) : cfg.chatbotEnabled,
     openrouterModel: row.openrouter_model || cfg.openrouterModel || 'openai/gpt-4o-mini',
     hasOpenrouterKey: Boolean(cfg.openrouterApiKey),
     openrouterKeyMasked: maskApiKey(cfg.openrouterApiKey),
+    studioOriginState: cfg.studioOriginState || 'Maharashtra',
+    shippingZones: Array.isArray(cfg.shippingZones) ? cfg.shippingZones : undefined,
+    razorpayKeyId: rzp.keyId,
+    hasRazorpayKey: Boolean(rzp.keyId && rzp.keySecret),
+    razorpaySecretMasked: maskApiKey(rzp.keySecret),
+    razorpayMode: rzp.mode,
+    gaMeasurementId: cfg.gaMeasurementId || process.env.GA_MEASUREMENT_ID || '',
+    googleSiteVerification: cfg.googleSiteVerification || process.env.GOOGLE_SITE_VERIFICATION || '',
   };
 }
 
@@ -515,10 +679,7 @@ export function createApp() {
         : new Date().toISOString().split('T')[0];
 
       // Determine role strictly on server (never trust client-supplied role)
-      const ownerEmail = (process.env.STUDIO_OWNER_EMAIL || 'owner@varniksatelier.studio')
-        .trim()
-        .toLowerCase();
-      let role: 'customer' | 'owner' = email === ownerEmail ? 'owner' : 'customer';
+      let role: 'customer' | 'owner' = isAllowedAdminEmail(email) ? 'owner' : 'customer';
 
       try {
         const { data: existing } = await supabase
@@ -612,13 +773,24 @@ export function createApp() {
           loadExtendedConfig(),
         ]);
 
+      const dbCoupons = (couponsRes.data ?? []).map(mapDbCouponToApp);
+      const extraFreeShipCoupons = Array.isArray(extCfg.freeShippingCoupons)
+        ? extCfg.freeShippingCoupons
+        : [];
+      const seenCodes = new Set(dbCoupons.map((c) => String(c.code).toUpperCase()));
+      const mergedCoupons = [
+        ...dbCoupons,
+        ...extraFreeShipCoupons.filter((c) => !seenCodes.has(String(c.code).toUpperCase())),
+      ];
+      const rzp = getEffectiveRazorpayCredentials(extCfg);
+
       res.json({
         synced: true,
         categories: (categoriesRes.data ?? []).map(mapDbCategoryToApp),
         products: (productsRes.data ?? []).map(mapDbProductToApp),
         orders: (ordersRes.data ?? []).map(mapDbOrderToApp),
         commissions: (commissionsRes.data ?? []).map(mapDbCommissionToApp),
-        coupons: (couponsRes.data ?? []).map(mapDbCouponToApp),
+        coupons: mergedCoupons,
         settings: settingsRes.data
           ? mapDbSettingsToApp(settingsRes.data, extCfg)
           : {
@@ -626,14 +798,23 @@ export function createApp() {
               contactEmail: 'hello@varniksatelier.studio',
               contactPhone: '+91 98204 51120',
               currency: 'INR',
-              freeShippingThreshold: 999,
-              defaultShippingFee: 95,
-              announcementText: 'Handmade • Heartmade • Heartfelt — Free shipping on orders above ₹999',
+              freeShippingThreshold: 1000,
+              defaultShippingFee: 99,
+              announcementText:
+                'Handmade • Heartmade • Heartfelt — Free delivery on orders above ₹1,000 (Code: FREESHIP1000)',
               logoUrl: extCfg.logoUrl || '',
               chatbotEnabled: extCfg.chatbotEnabled,
               openrouterModel: extCfg.openrouterModel,
               hasOpenrouterKey: Boolean(extCfg.openrouterApiKey),
               openrouterKeyMasked: maskApiKey(extCfg.openrouterApiKey),
+              studioOriginState: extCfg.studioOriginState || 'Maharashtra',
+              shippingZones: extCfg.shippingZones,
+              razorpayKeyId: rzp.keyId,
+              hasRazorpayKey: Boolean(rzp.keyId && rzp.keySecret),
+              razorpaySecretMasked: maskApiKey(rzp.keySecret),
+              razorpayMode: rzp.mode,
+              gaMeasurementId: extCfg.gaMeasurementId || '',
+              googleSiteVerification: extCfg.googleSiteVerification || '',
             },
       });
     } catch (err: any) {
@@ -929,18 +1110,35 @@ export function createApp() {
     }
   });
 
-  // Coupons
+  // Coupons (persists percentage/fixed in Supabase table & free_shipping coupons in extended studio config)
   app.put('/api/coupons', async (req, res) => {
-    if (!supabase) return res.json({ synced: false });
     try {
       const coupons = Array.isArray(req.body?.coupons) ? req.body.coupons : [];
+      const freeShipCoupons = coupons
+        .filter((c: any) => c.discountType === 'free_shipping')
+        .map((c: any) => ({
+          id: String(c.id || `coup-fs-${Date.now()}`),
+          code: String(c.code).toUpperCase(),
+          discountType: 'free_shipping' as const,
+          discountValue: Number(c.discountValue || 100),
+          minimumOrder: Number(c.minimumOrder ?? 1000),
+          isActive: Boolean(c.isActive),
+          autoApply: Boolean(c.autoApply),
+          expiresAt: c.expiresAt || undefined,
+        }));
+
+      await saveExtendedConfig({ freeShippingCoupons: freeShipCoupons });
+
+      if (!supabase) return res.json({ synced: false });
+
+      const standardCoupons = coupons.filter((c: any) => c.discountType !== 'free_shipping');
       await supabase.from('coupons').delete().neq('id', '__none__');
-      if (coupons.length > 0) {
-        const rows = coupons.map((c: any) => ({
+      if (standardCoupons.length > 0) {
+        const rows = standardCoupons.map((c: any) => ({
           id: c.id,
           code: String(c.code).toUpperCase(),
-          discount_type: c.discountType,
-          discount_value: Number(c.discountValue),
+          discount_type: c.discountType === 'fixed' ? 'fixed' : 'percentage',
+          discount_value: Math.max(1, Number(c.discountValue || 1)),
           minimum_order: Number(c.minimumOrder ?? 0),
           expires_at: c.expiresAt || null,
           is_active: Boolean(c.isActive),
@@ -954,7 +1152,7 @@ export function createApp() {
     }
   });
 
-  // Store Settings (including custom Logo URL & OpenRouter key stored server-side)
+  // Store Settings (including custom Logo, OpenRouter, Razorpay Live Keys, Shipping Zones & GA4/SEO)
   app.put('/api/settings', async (req, res) => {
     try {
       const s = req.body as Record<string, any>;
@@ -971,16 +1169,55 @@ export function createApp() {
           extPatch.openrouterApiKey = s.openrouterApiKey.trim();
         }
       }
+      if (typeof s.razorpayKeyId === 'string') {
+        extPatch.razorpayKeyId = s.razorpayKeyId.trim();
+      }
+      if (typeof s.razorpayKeySecret === 'string') {
+        if (s.razorpayKeySecret === '__CLEAR__') {
+          extPatch.razorpayKeySecret = '';
+        } else if (s.razorpayKeySecret.trim()) {
+          extPatch.razorpayKeySecret = s.razorpayKeySecret.trim();
+        }
+      }
+      if (typeof s.studioOriginState === 'string' && s.studioOriginState.trim()) {
+        extPatch.studioOriginState = s.studioOriginState.trim();
+      }
+      if (Array.isArray(s.shippingZones)) {
+        extPatch.shippingZones = s.shippingZones.map((z: any) => ({
+          id: String(z.id || ''),
+          name: String(z.name || ''),
+          description: String(z.description || ''),
+          fee: Math.max(0, Number(z.fee || 0)),
+          eta: String(z.eta || ''),
+          states: Array.isArray(z.states) ? z.states.map(String) : undefined,
+        }));
+      }
+      if (typeof s.gaMeasurementId === 'string') {
+        extPatch.gaMeasurementId = s.gaMeasurementId.trim();
+      }
+      if (typeof s.googleSiteVerification === 'string') {
+        extPatch.googleSiteVerification = s.googleSiteVerification.trim();
+      }
 
       const savedExt = await saveExtendedConfig(extPatch);
+      const rzp = getEffectiveRazorpayCredentials(savedExt);
+
+      const safeSummary = {
+        hasOpenrouterKey: Boolean(savedExt.openrouterApiKey),
+        openrouterKeyMasked: maskApiKey(savedExt.openrouterApiKey),
+        logoUrl: savedExt.logoUrl,
+        razorpayKeyId: rzp.keyId,
+        hasRazorpayKey: Boolean(rzp.keyId && rzp.keySecret),
+        razorpaySecretMasked: maskApiKey(rzp.keySecret),
+        razorpayMode: rzp.mode,
+        studioOriginState: savedExt.studioOriginState,
+        shippingZones: savedExt.shippingZones,
+        gaMeasurementId: savedExt.gaMeasurementId,
+        googleSiteVerification: savedExt.googleSiteVerification,
+      };
 
       if (!supabase) {
-        return res.json({
-          synced: false,
-          hasOpenrouterKey: Boolean(savedExt.openrouterApiKey),
-          openrouterKeyMasked: maskApiKey(savedExt.openrouterApiKey),
-          logoUrl: savedExt.logoUrl,
-        });
+        return res.json({ synced: false, ...safeSummary });
       }
 
       const { error } = await supabase.from('store_settings').upsert({
@@ -989,22 +1226,371 @@ export function createApp() {
         contact_email: s.contactEmail,
         contact_phone: s.contactPhone,
         currency: s.currency ?? 'INR',
-        free_shipping_threshold: Number(s.freeShippingThreshold),
-        default_shipping_fee: Number(s.defaultShippingFee),
+        free_shipping_threshold: Number(s.freeShippingThreshold ?? 1000),
+        default_shipping_fee: Number(s.defaultShippingFee ?? 99),
         announcement_text: s.announcementText,
         updated_at: new Date().toISOString(),
       });
-      if (error) return res.status(400).json({ synced: false, error: error.message });
+      if (error) return res.status(400).json({ synced: false, error: error.message, ...safeSummary });
 
-      return res.json({
-        synced: true,
-        hasOpenrouterKey: Boolean(savedExt.openrouterApiKey),
-        openrouterKeyMasked: maskApiKey(savedExt.openrouterApiKey),
-        logoUrl: savedExt.logoUrl,
-      });
+      return res.json({ synced: true, ...safeSummary });
     } catch (err: any) {
       return res.status(500).json({ synced: false, error: err?.message });
     }
+  });
+
+  // Razorpay Live Payment Gateway Endpoints (Secret stays strictly on server)
+  app.get('/api/razorpay/config', async (_req, res) => {
+    const ext = await loadExtendedConfig();
+    const rzp = getEffectiveRazorpayCredentials(ext);
+    return res.json({
+      configured: Boolean(rzp.keyId && rzp.keySecret),
+      keyId: rzp.keyId,
+      mode: rzp.mode,
+    });
+  });
+
+  app.post('/api/razorpay/test', async (_req, res) => {
+    const ext = await loadExtendedConfig();
+    const rzp = getEffectiveRazorpayCredentials(ext);
+    if (!rzp.keyId || !rzp.keySecret) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Enter both Razorpay Live Key ID (rzp_live_...) and Live Secret Key first.',
+      });
+    }
+    try {
+      const auth = Buffer.from(`${rzp.keyId}:${rzp.keySecret}`).toString('base64');
+      const r = await fetch('https://api.razorpay.com/v1/orders?count=1', {
+        method: 'GET',
+        headers: { Authorization: `Basic ${auth}` },
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg =
+          data?.error?.description ||
+          data?.error?.message ||
+          `Razorpay rejected credentials (HTTP ${r.status})`;
+        return res.status(400).json({ ok: false, error: msg });
+      }
+      return res.json({
+        ok: true,
+        mode: rzp.mode,
+        message: `Connected to Razorpay (${rzp.mode.toUpperCase()} mode verified).`,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || 'Unable to reach Razorpay API.',
+      });
+    }
+  });
+
+  app.post('/api/razorpay/create-order', async (req, res) => {
+    const ext = await loadExtendedConfig();
+    const rzp = getEffectiveRazorpayCredentials(ext);
+    if (!rzp.keyId || !rzp.keySecret) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Razorpay is not configured yet. Studio Owner can add Live Key ID & Secret Key in Admin → Settings.',
+      });
+    }
+
+    const amountInr = Number(req.body?.amountInr);
+    if (!Number.isFinite(amountInr) || amountInr <= 0 || amountInr > 500000) {
+      return res.status(400).json({ ok: false, error: 'Invalid payment amount in INR.' });
+    }
+
+    const amountPaise = Math.round(amountInr * 100);
+    const receipt = String(req.body?.receipt || `va_${Date.now()}`).slice(0, 40);
+    const notesRaw = req.body?.notes && typeof req.body.notes === 'object' ? req.body.notes : {};
+    const notes: Record<string, string> = {};
+    for (const [k, v] of Object.entries(notesRaw).slice(0, 5)) {
+      if (typeof v === 'string' && v.trim()) notes[k] = v.trim().slice(0, 120);
+    }
+
+    try {
+      const auth = Buffer.from(`${rzp.keyId}:${rzp.keySecret}`).toString('base64');
+      const r = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amountPaise,
+          currency: 'INR',
+          receipt,
+          notes,
+        }),
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok || !json?.id) {
+        return res.status(400).json({
+          ok: false,
+          error:
+            json?.error?.description ||
+            json?.error?.message ||
+            `Razorpay order creation failed (HTTP ${r.status})`,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        orderId: json.id,
+        amount: json.amount,
+        currency: json.currency || 'INR',
+        keyId: rzp.keyId,
+        mode: rzp.mode,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || 'Failed to create Razorpay order.',
+      });
+    }
+  });
+
+  app.post('/api/razorpay/verify', async (req, res) => {
+    const ext = await loadExtendedConfig();
+    const rzp = getEffectiveRazorpayCredentials(ext);
+    if (!rzp.keySecret) {
+      return res.status(400).json({ verified: false, error: 'Razorpay secret is not configured.' });
+    }
+
+    const orderId = String(req.body?.razorpay_order_id || '').trim();
+    const paymentId = String(req.body?.razorpay_payment_id || '').trim();
+    const signature = String(req.body?.razorpay_signature || '').trim();
+
+    if (!orderId || !paymentId || !signature) {
+      return res.status(400).json({
+        verified: false,
+        error: 'Missing Razorpay order ID, payment ID, or signature.',
+      });
+    }
+
+    const expected = crypto
+      .createHmac('sha256', rzp.keySecret)
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
+
+    const expectedBuf = Buffer.from(expected, 'utf8');
+    const actualBuf = Buffer.from(signature, 'utf8');
+    const verified =
+      expectedBuf.length === actualBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+    if (!verified) {
+      return res.status(400).json({
+        verified: false,
+        error: 'Invalid Razorpay payment signature.',
+      });
+    }
+
+    return res.json({ verified: true, orderId, paymentId });
+  });
+
+  // Admin Portal PIN Gate & Forgot PIN Recovery (strictly server-side verification)
+  app.get('/api/admin/pin/status', async (_req, res) => {
+    const extCfg = await loadExtendedConfig();
+    return res.json({
+      pinRequired: true,
+      hasCustomPin: Boolean(extCfg.adminPinHash || process.env.ADMIN_PORTAL_PIN),
+      securityQuestion: "What is your pet's name?",
+    });
+  });
+
+  app.post('/api/admin/pin/verify', async (req, res) => {
+    const clientIp =
+      String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')
+        .split(',')[0]
+        .trim();
+    const limit = checkPinRateLimit(clientIp);
+    if (!limit.allowed) {
+      return res.status(429).json({
+        ok: false,
+        error: `Too many incorrect PIN attempts. Please try again in ${limit.retryAfterSec} seconds.`,
+      });
+    }
+
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const pin = String(req.body?.pin || '').trim();
+
+    if (email && !isAllowedAdminEmail(email)) {
+      return res.status(403).json({
+        ok: false,
+        error: 'This email does not have Studio Admin privileges.',
+      });
+    }
+
+    if (!pin || pin.length < 4 || pin.length > 16) {
+      return res.status(400).json({ ok: false, error: 'Please enter a valid Admin PIN.' });
+    }
+
+    const extCfg = await loadExtendedConfig();
+    const envPin = (process.env.ADMIN_PORTAL_PIN || '').trim();
+
+    let matched = false;
+    if (extCfg.adminPinHash) {
+      matched = verifyScryptHash(pin, extCfg.adminPinHash);
+    } else if (envPin) {
+      matched = constantTimeEquals(pin, envPin);
+    } else {
+      matched = verifyScryptHash(pin, DEFAULT_ADMIN_PIN_SCRYPT);
+    }
+
+    if (!matched) {
+      recordPinFailure(clientIp);
+      return res.status(401).json({
+        ok: false,
+        error: 'Incorrect Admin PIN. Try again or use "Forgot PIN?" below.',
+      });
+    }
+
+    clearPinFailures(clientIp);
+    const unlockToken = issueAdminUnlockToken(email || 'studio-admin');
+    return res.json({ ok: true, unlockToken });
+  });
+
+  app.post('/api/admin/pin/reset', async (req, res) => {
+    const clientIp =
+      String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')
+        .split(',')[0]
+        .trim();
+    const limit = checkPinRateLimit(clientIp);
+    if (!limit.allowed) {
+      return res.status(429).json({
+        ok: false,
+        error: `Too many recovery attempts. Please wait ${limit.retryAfterSec} seconds.`,
+      });
+    }
+
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const petName = String(req.body?.petName || '').trim().toLowerCase();
+    const newPin = String(req.body?.newPin || '').trim();
+
+    if (email && !isAllowedAdminEmail(email)) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Only authorized Studio Admin accounts can reset the Admin PIN.',
+      });
+    }
+
+    if (!petName) {
+      return res.status(400).json({ ok: false, error: 'Please enter your pet name answer.' });
+    }
+
+    if (!/^\d{4,8}$/.test(newPin)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'New PIN must be 4 to 8 digits (numbers only).',
+      });
+    }
+
+    const envPetAnswer = (process.env.ADMIN_RECOVERY_PET_NAME || '').trim().toLowerCase();
+    const petMatched = envPetAnswer
+      ? constantTimeEquals(petName, envPetAnswer)
+      : verifyScryptHash(petName, DEFAULT_ADMIN_PET_SCRYPT);
+
+    if (!petMatched) {
+      recordPinFailure(clientIp);
+      return res.status(401).json({
+        ok: false,
+        error: 'Incorrect pet name answer. Please try again.',
+      });
+    }
+
+    clearPinFailures(clientIp);
+    const nextHash = hashAdminSecret(newPin);
+    await saveExtendedConfig({ adminPinHash: nextHash });
+    const unlockToken = issueAdminUnlockToken(email || 'studio-admin');
+    return res.json({
+      ok: true,
+      unlockToken,
+      message: 'Admin PIN updated and portal unlocked.',
+    });
+  });
+
+  // SEO Crawling Support: robots.txt & dynamic sitemap.xml
+  app.get(['/robots.txt', '/api/robots.txt'], (req, res) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:3000';
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const baseUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/$/, '');
+    res.type('text/plain').send(
+      [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /admin/*',
+        'Disallow: /checkout',
+        'Disallow: /account',
+        '',
+        `Sitemap: ${baseUrl}/sitemap.xml`,
+      ].join('\n')
+    );
+  });
+
+  app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || 'localhost:3000';
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const baseUrl = (process.env.APP_URL || `${proto}://${host}`).replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
+
+    const staticPaths = [
+      { path: '/', priority: '1.0', freq: 'daily' },
+      { path: '/shop', priority: '0.9', freq: 'daily' },
+      { path: '/custom-orders', priority: '0.9', freq: 'weekly' },
+      { path: '/about-us', priority: '0.7', freq: 'monthly' },
+      { path: '/faq', priority: '0.6', freq: 'monthly' },
+      { path: '/contact', priority: '0.6', freq: 'monthly' },
+    ];
+
+    const dynamicUrls: Array<{ path: string; priority: string; freq: string }> = [];
+    if (supabase) {
+      try {
+        const [{ data: cats }, { data: prods }] = await Promise.all([
+          supabase.from('categories').select('slug'),
+          supabase.from('products').select('slug').eq('is_published', true),
+        ]);
+        for (const c of cats ?? []) {
+          if (c?.slug) {
+            dynamicUrls.push({
+              path: `/shop/category/${encodeURIComponent(c.slug)}`,
+              priority: '0.8',
+              freq: 'weekly',
+            });
+          }
+        }
+        for (const p of prods ?? []) {
+          if (p?.slug) {
+            dynamicUrls.push({
+              path: `/product/${encodeURIComponent(p.slug)}`,
+              priority: '0.8',
+              freq: 'weekly',
+            });
+          }
+        }
+      } catch {
+        // Fallback to static paths if DB unavailable
+      }
+    }
+
+    const allUrls = [...staticPaths, ...dynamicUrls];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls
+  .map(
+    (u) => `  <url>
+    <loc>${baseUrl}${u.path}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.freq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`
+  )
+  .join('\n')}
+</urlset>`;
+    res.type('application/xml').send(xml);
   });
 
   // OpenRouter Studio Chatbot Proxy + Admin Logs

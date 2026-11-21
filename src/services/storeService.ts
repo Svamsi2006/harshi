@@ -14,6 +14,7 @@ import type {
 import { DEFAULT_CATEGORIES, PRODUCTS } from '../data/products';
 import { STUDIO_MEDIA } from '../data/studioImages';
 import { DEMO_CUSTOMER, INITIAL_ADDRESSES, INITIAL_CART_HISTORY, INITIAL_ORDERS } from '../data/mockAccount';
+import { isAdminEmail } from '../utils/admin';
 export { DEMO_CUSTOMER };
 
 const KEY_PREFIX = 'varniks_atelier_v3';
@@ -28,6 +29,15 @@ export const DEMO_OWNER: CustomerUser = {
 };
 
 const INITIAL_COUPONS: Coupon[] = [
+  {
+    id: 'coup-freeship-1000',
+    code: 'FREESHIP1000',
+    discountType: 'free_shipping',
+    discountValue: 100,
+    minimumOrder: 1000,
+    isActive: true,
+    autoApply: true,
+  },
   {
     id: 'coup-1',
     code: 'STUDIO10',
@@ -51,9 +61,11 @@ const INITIAL_SETTINGS: StoreSettings = {
   contactEmail: 'hello@varniksatelier.studio',
   contactPhone: '+91 98204 51120',
   currency: 'INR',
-  freeShippingThreshold: 999,
-  defaultShippingFee: 95,
-  announcementText: 'Handmade • Heartmade • Heartfelt — Free shipping on orders above ₹999',
+  freeShippingThreshold: 1000,
+  defaultShippingFee: 99,
+  studioOriginState: 'Maharashtra',
+  announcementText:
+    'Handmade • Heartmade • Heartfelt — Free delivery on orders above ₹1,000 (Code: FREESHIP1000)',
 };
 
 const INITIAL_COMMISSIONS: CommissionRequest[] = [
@@ -131,18 +143,29 @@ function writeJson<T>(key: string, value: T): void {
 
 export const storeService = {
   getCurrentUser(): CustomerUser | null {
-    return readJson<CustomerUser | null>(`${KEY_PREFIX}:current_user`, null);
+    const current = readJson<CustomerUser | null>(`${KEY_PREFIX}:current_user`, null);
+    if (current && isAdminEmail(current.email) && current.role !== 'owner') {
+      const promoted: CustomerUser = { ...current, role: 'owner' };
+      writeJson(`${KEY_PREFIX}:current_user`, promoted);
+      return promoted;
+    }
+    return current;
   },
 
   setCurrentUser(user: CustomerUser | null): void {
-    writeJson(`${KEY_PREFIX}:current_user`, user);
+    const normalized =
+      user && isAdminEmail(user.email) && user.role !== 'owner'
+        ? { ...user, role: 'owner' as const }
+        : user;
+    writeJson(`${KEY_PREFIX}:current_user`, normalized);
   },
 
   getRegisteredUsers(): Array<CustomerUser & { password?: string }> {
-    return readJson<Array<CustomerUser & { password?: string }>>(`${KEY_PREFIX}:users`, [
+    const users = readJson<Array<CustomerUser & { password?: string }>>(`${KEY_PREFIX}:users`, [
       { ...DEMO_CUSTOMER, password: 'studio123' },
       { ...DEMO_OWNER, password: 'owner123' },
     ]);
+    return users.map((u) => (isAdminEmail(u.email) ? { ...u, role: 'owner' as const } : u));
   },
 
   registerUser(user: CustomerUser, password: string): void {

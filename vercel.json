@@ -10,11 +10,19 @@
   },
   "rewrites": [
     {
+      "source": "/robots.txt",
+      "destination": "/api/index?__path=robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index?__path=sitemap.xml"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index?__path=$1"
     },
     {
-      "source": "/((?!api(?:/|$)).*)",
+      "source": "/((?!api(?:/|$)|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
   ]

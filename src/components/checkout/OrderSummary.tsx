@@ -6,11 +6,21 @@ import { ResilientImage } from '../common/ResilientImage';
 
 interface OrderSummaryProps {
   discount?: number;
+  shippingFeeOverride?: number;
+  shippingZoneLabel?: string;
+  freeDeliveryCouponCode?: string | null;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ discount = 0 }) => {
-  const { cart, cartSubtotal, shippingFee } = useStore();
-  const total = Math.max(0, cartSubtotal + shippingFee - discount);
+export const OrderSummary: React.FC<OrderSummaryProps> = ({
+  discount = 0,
+  shippingFeeOverride,
+  shippingZoneLabel,
+  freeDeliveryCouponCode,
+}) => {
+  const { cart, products, cartSubtotal, shippingFee } = useStore();
+  const effectiveShipping =
+    typeof shippingFeeOverride === 'number' ? shippingFeeOverride : shippingFee;
+  const total = Math.max(0, cartSubtotal + effectiveShipping - discount);
 
   return (
     <aside className="bg-white border border-[#E7C7CC] rounded-2xl p-5 sm:p-6 shadow-warm/40">
@@ -20,7 +30,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ discount = 0 }) => {
 
       <ul className="divide-y divide-[#E7C7CC] my-2 max-h-72 overflow-y-auto">
         {cart.map((item) => {
-          const product = getProductById(item.productId);
+          const product =
+            products.find((p) => p.id === item.productId) ?? getProductById(item.productId);
           if (!product) return null;
           return (
             <li key={item.productId} className="py-3 flex items-center gap-3">
@@ -48,10 +59,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ discount = 0 }) => {
           <span>Subtotal</span>
           <span className="tabular-nums text-[#3E2F27]">{formatINR(cartSubtotal)}</span>
         </div>
-        <div className="flex justify-between text-[#7A655C]">
-          <span>Studio Packing &amp; Shipping</span>
-          <span className="tabular-nums text-[#C9A66B] font-medium">
-            {shippingFee === 0 ? 'Free' : formatINR(shippingFee)}
+        <div className="flex justify-between items-start gap-3 text-[#7A655C]">
+          <span className="leading-snug">
+            {shippingZoneLabel ? `Delivery (${shippingZoneLabel})` : 'Studio Packing & Shipping'}
+          </span>
+          <span className="tabular-nums text-[#C9A66B] font-medium shrink-0 text-right">
+            {effectiveShipping === 0
+              ? freeDeliveryCouponCode
+                ? `Free (${freeDeliveryCouponCode})`
+                : 'Free'
+              : formatINR(effectiveShipping)}
           </span>
         </div>
         {discount > 0 && (

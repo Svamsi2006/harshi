@@ -10,6 +10,7 @@ import { SearchOverlay } from './components/navigation/SearchOverlay';
 import { ToastNotification } from './components/common/ToastNotification';
 import { StudioSplashIntro } from './components/common/StudioSplashIntro';
 import { StudioChatbotWidget } from './components/chat/StudioChatbotWidget';
+import { SeoManager } from './components/common/SeoManager';
 
 import { HomePage } from './pages/Home/HomePage';
 import { ShopPage } from './pages/Shop/ShopPage';
@@ -31,6 +32,7 @@ import { FaqPage } from './pages/Policies/FaqPage';
 import { EmptyState } from './components/common/EmptyState';
 
 import { AdminLoginPage } from './pages/Admin/AdminLoginPage';
+import { AdminPinGate } from './components/admin/AdminPinGate';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminProductsPage } from './pages/Admin/AdminProductsPage';
 import { AdminProductFormPage } from './pages/Admin/AdminProductFormPage';
@@ -102,9 +104,12 @@ const ScrollToTop: React.FC = () => {
 };
 
 const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAdmin } = useStore();
+  const { isAdmin, adminPinUnlocked } = useStore();
   if (!isAdmin) {
     return <Navigate to="/admin/login" replace />;
+  }
+  if (!adminPinUnlocked) {
+    return <AdminPinGate />;
   }
   return <>{children}</>;
 };
@@ -123,6 +128,7 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#FFF9F5] text-[#3E2F27]">
+      <SeoManager />
       <StudioSplashIntro replayTrigger={introReplay} />
       <div className="fixed inset-0 paper-grain-overlay z-[1]" aria-hidden="true" />
 

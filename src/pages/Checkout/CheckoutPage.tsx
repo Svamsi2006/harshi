@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -10,10 +10,18 @@ import {
   Sparkles,
   CheckCircle2,
   Lock,
+  Truck,
+  MapPin,
 } from 'lucide-react';
 import type { PaymentMethod } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { formatINR } from '../../utils/format';
+import { calculateLocationShipping } from '../../utils/shipping';
+import {
+  fetchRazorpayPublicConfig,
+  openRazorpayLiveCheckout,
+  type RazorpayPublicConfig,
+} from '../../lib/razorpay';
 import { STUDIO_MEDIA } from '../../data/studioImages';
 import { PageTransition } from '../../components/common/PageTransition';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -22,6 +30,7 @@ import { CheckoutStepper } from '../../components/checkout/CheckoutStepper';
 import { OrderSummary } from '../../components/checkout/OrderSummary';
 
 const CHECKOUT_DISCOUNT_STORAGE_KEY = 'varniks_checkout_discount';
+const CHECKOUT_COUPON_STORAGE_KEY = 'varniks_checkout_coupon';
 
 const GoogleMark: React.FC = () => (
   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
@@ -52,7 +61,7 @@ export const CheckoutPage: React.FC = () => {
     googleAuthAvailable,
     cart,
     cartSubtotal,
-    shippingFee,
+    coupons,
     addresses,
     addAddress,
     commissions,
@@ -68,9 +77,9 @@ export const CheckoutPage: React.FC = () => {
     ? commissions.find((c) => c.id === customRequestId)
     : undefined;
 
-  const stateDiscount = (location.state as { discount?: number } | null)?.discount;
+  const locState = location.state as { discount?: number; couponCode?: string } | null;
   const discountFromCart = (() => {
-    if (typeof stateDiscount === 'number' && stateDiscount > 0) return stateDiscount;
+    if (typeof locState?.discount === 'number' && locState.discount > 0) return locState.discount;
     try {
       const stored = Number(sessionStorage.getItem(CHECKOUT_DISCOUNT_STORAGE_KEY) || 0);
       return Number.isFinite(stored) && stored > 0 ? stored : 0;
@@ -78,6 +87,15 @@ export const CheckoutPage: React.FC = () => {
       return 0;
     }
   })();
+
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(() => {
+    if (locState?.couponCode) return locState.couponCode;
+    try {
+      return sessionStorage.getItem(CHECKOUT_COUPON_STORAGE_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
 
   const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
 
@@ -107,6 +125,21 @@ export const CheckoutPage: React.FC = () => {
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
   const [gateAuthError, setGateAuthError] = useState('');
+  const [razorpayConfig, setRazorpayConfig] = useState<RazorpayPublicConfig>({
+    configured: Boolean(storeSettings.hasRazorpayKey && storeSettings.razorpayKeyId),
+    keyId: storeSettings.razorpayKeyId || '',
+    mode: storeSettings.razorpayMode || 'unconfigured',
+  });
+
+  useEffect(() => {
+    let active = true;
+    fetchRazorpayPublicConfig().then((cfg) => {
+      if (active) setRazorpayConfig(cfg);
+    });
+    return () => {
+      active = false;
+    };
+  }, [storeSettings.hasRazorpayKey, storeSettings.razorpayKeyId]);
 
   // Sync user, saved address, and custom request details after sign-in or async hydration
   useEffect(() => {
@@ -135,6 +168,39 @@ export const CheckoutPage: React.FC = () => {
       if (!phone) setPhone(customRequest.phone);
     }
   }, [customRequest, email, fullName, phone]);
+
+  const customSubtotal = customRequest
+    ? customRequest.quotedPrice ?? customRequest.predictedPrice ?? 1499
+    : 0;
+  const activeSubtotal = customRequest ? customSubtotal : cartSubtotal;
+
+  const locationShipping = useMemo(
+    () =>
+      calculateLocationShipping({
+        country,
+        state: stateName,
+        city,
+        postalCode,
+        subtotal: activeSubtotal,
+        zones: storeSettings.shippingZones,
+        originState: storeSettings.studioOriginState,
+        freeShippingThreshold: storeSettings.freeShippingThreshold,
+        coupons,
+        appliedCouponCode,
+      }),
+    [
+      country,
+      stateName,
+      city,
+      postalCode,
+      activeSubtotal,
+      storeSettings.shippingZones,
+      storeSettings.studioOriginState,
+      storeSettings.freeShippingThreshold,
+      coupons,
+      appliedCouponCode,
+    ]
+  );
 
   const isCustomCheckout = Boolean(customRequestId);
   const currentCheckoutUrl = `${location.pathname}${location.search}`;
@@ -287,16 +353,7 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const customSubtotal = customRequest
-    ? customRequest.quotedPrice ?? customRequest.predictedPrice ?? 1499
-    : 0;
-  const customShipping =
-    customRequest && customSubtotal < storeSettings.freeShippingThreshold
-      ? storeSettings.defaultShippingFee
-      : 0;
-
-  const activeSubtotal = customRequest ? customSubtotal : cartSubtotal;
-  const activeShippingFee = customRequest ? customShipping : shippingFee;
+  const activeShippingFee = locationShipping.finalFee;
   const activeDiscount = customRequest ? 0 : discountFromCart;
   const totalPayable = Math.max(0, activeSubtotal + activeShippingFee - activeDiscount);
 
@@ -374,7 +431,70 @@ export const CheckoutPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePayNow = () => {
+  const finalizeOrderRecord = (paymentReference: string) => {
+    const cleanAddress = {
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      addressLine: addressLine.trim(),
+      city: city.trim(),
+      state: stateName.trim(),
+      postalCode: postalCode.trim(),
+      country: country.trim() || 'India',
+    };
+
+    if (customRequest) {
+      const order = approveCustomOrderByCustomerAndCreateOrder(customRequest.id, {
+        shippingAddress: cleanAddress,
+        customerEmail: email.trim(),
+        customerName: fullName.trim(),
+        paymentMethod,
+        paymentReference,
+        shippingFeeOverride: activeShippingFee,
+      });
+      setProcessing(false);
+      if (order) {
+        try {
+          sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
+          sessionStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        navigate('/order-success', { state: { order } });
+      } else {
+        setStep(1);
+        setFormError('Please make sure you are signed in and all shipping details are filled in.');
+      }
+      return;
+    }
+
+    const order = placeOrder({
+      shippingAddress: cleanAddress,
+      paymentMethod,
+      customerEmail: email.trim(),
+      customerName: fullName.trim(),
+      paymentReference,
+      discount: discountFromCart,
+      shippingFeeOverride: activeShippingFee,
+    });
+
+    setProcessing(false);
+    if (order) {
+      try {
+        sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
+        sessionStorage.removeItem(CHECKOUT_COUPON_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      navigate('/order-success', { state: { order } });
+    } else {
+      setStep(1);
+      setFormError(
+        'Unable to submit order. Please ensure you are signed in with a complete delivery address.'
+      );
+    }
+  };
+
+  const handlePayNow = async () => {
     if (!user) {
       setPaymentError('Please sign in to place and track your order.');
       return;
@@ -397,79 +517,56 @@ export const CheckoutPage: React.FC = () => {
     }
 
     if (!verifyConfirmed) {
-      setPaymentError('Please verify your delivery address and tick the confirmation box to submit your order.');
+      setPaymentError(
+        'Please verify your delivery address and tick the confirmation box to proceed.'
+      );
       return;
     }
+
     setPaymentError('');
     setProcessing(true);
 
-    window.setTimeout(() => {
-      if (simulateFailure) {
+    if (simulateFailure) {
+      window.setTimeout(() => {
         setProcessing(false);
         setPaymentError(
           'Payment authorization declined by bank simulator. Uncheck the failure test option or try another payment method.'
         );
+      }, 650);
+      return;
+    }
+
+    // Live / Test Razorpay Gateway Checkout when configured
+    if (paymentMethod === 'razorpay' && razorpayConfig.configured && totalPayable > 0) {
+      const rzpRes = await openRazorpayLiveCheckout({
+        amountInr: totalPayable,
+        storeName: storeSettings.storeName || 'varniks_atelier',
+        description: customRequest
+          ? `Custom Keepsake Order ${customRequest.id}`
+          : `Handmade Studio Order (${cart.length} ${cart.length === 1 ? 'item' : 'items'})`,
+        customerName: fullName.trim(),
+        customerEmail: email.trim(),
+        customerPhone: phone.trim(),
+        receipt: customRequest ? `custom_${customRequest.id}` : `studio_${Date.now()}`,
+      });
+
+      if (!rzpRes.ok || !rzpRes.paymentId) {
+        setProcessing(false);
+        setPaymentError(rzpRes.error || 'Razorpay payment was not completed.');
         return;
       }
 
-      const cleanAddress = {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        addressLine: addressLine.trim(),
-        city: city.trim(),
-        state: stateName.trim(),
-        postalCode: postalCode.trim(),
-        country: country.trim() || 'India',
-      };
+      finalizeOrderRecord(rzpRes.paymentId);
+      return;
+    }
+
+    // Fallback order submission when Stripe or manual UPI reference is used (or before Razorpay keys are added)
+    window.setTimeout(() => {
       const generatedRef =
         paymentRefInput.trim() ||
         `${paymentMethod.toUpperCase()}-${Math.floor(100000 + Math.random() * 899999)}`;
-
-      if (customRequest) {
-        const order = approveCustomOrderByCustomerAndCreateOrder(customRequest.id, {
-          shippingAddress: cleanAddress,
-          customerEmail: email.trim(),
-          customerName: fullName.trim(),
-          paymentMethod,
-          paymentReference: generatedRef,
-        });
-        setProcessing(false);
-        if (order) {
-          try {
-            sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
-          } catch {
-            // ignore
-          }
-          navigate('/order-success', { state: { order } });
-        } else {
-          setStep(1);
-          setFormError('Please make sure you are signed in and all shipping details are filled in.');
-        }
-        return;
-      }
-
-      const order = placeOrder({
-        shippingAddress: cleanAddress,
-        paymentMethod,
-        customerEmail: email.trim(),
-        customerName: fullName.trim(),
-        paymentReference: generatedRef,
-        discount: discountFromCart,
-      });
-
-      setProcessing(false);
-      if (order) {
-        try {
-          sessionStorage.removeItem(CHECKOUT_DISCOUNT_STORAGE_KEY);
-        } catch {
-          // ignore
-        }
-        navigate('/order-success', { state: { order } });
-      } else {
-        setStep(1);
-        setFormError('Unable to submit order. Please ensure you are signed in with a complete delivery address.');
-      }
-    }, 950);
+      finalizeOrderRecord(generatedRef);
+    }, 800);
   };
 
   const inputClass =
@@ -511,7 +608,7 @@ export const CheckoutPage: React.FC = () => {
                     Step 1: Contact &amp; Delivery Address
                   </h2>
                   <p className="text-xs text-[#7A655C] mt-1">
-                    Complete contact &amp; shipping details are required before any studio or custom order can be placed.
+                    Delivery charges calculate automatically based on your State, City, and PIN code.
                   </p>
                 </div>
 
@@ -668,6 +765,72 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Live Location-Based Delivery Rate Card */}
+                <div className="rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="w-4 h-4 text-[#6D1836] shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-[#3E2F27]">
+                          {locationShipping.zone.name}
+                        </p>
+                        <p className="text-[11px] text-[#7A655C]">
+                          Estimated transit: {locationShipping.eta} · Base rate{' '}
+                          {formatINR(locationShipping.baseFee)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {locationShipping.freeDeliveryApplied ? (
+                        <div>
+                          <span className="text-xs font-semibold text-[#6D1836]">FREE</span>
+                          {locationShipping.baseFee > 0 && (
+                            <span className="block text-[11px] text-[#7A655C] line-through tabular-nums">
+                              {formatINR(locationShipping.baseFee)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-semibold text-[#3E2F27] tabular-nums">
+                          {formatINR(locationShipping.finalFee)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {locationShipping.freeDeliveryApplied && locationShipping.freeDeliveryCoupon && (
+                    <p className="inline-flex items-center gap-1.5 text-[11px] text-[#6D1836] font-medium">
+                      <Truck className="w-3.5 h-3.5" />
+                      <span>
+                        Free Delivery Coupon{' '}
+                        <strong className="font-mono">{locationShipping.freeDeliveryCoupon.code}</strong>{' '}
+                        applied (orders ₹{locationShipping.freeDeliveryCoupon.minimumOrder}+)
+                      </span>
+                    </p>
+                  )}
+
+                  {!locationShipping.freeDeliveryApplied &&
+                    locationShipping.eligibleFreeDeliveryCoupon && (
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#E7C7CC]/70">
+                        <span className="text-[11px] text-[#7A655C]">
+                          Order qualifies for Free Delivery Coupon{' '}
+                          <strong className="font-mono text-[#6D1836]">
+                            {locationShipping.eligibleFreeDeliveryCoupon.code}
+                          </strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAppliedCouponCode(locationShipping.eligibleFreeDeliveryCoupon!.code)
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-[#6D1836] text-white text-[11px] font-medium hover:bg-[#541129]"
+                        >
+                          Apply Free Delivery
+                        </button>
+                      </div>
+                    )}
+                </div>
+
                 {user && (
                   <label className="inline-flex items-center gap-2 text-xs text-[#7A655C] cursor-pointer">
                     <input
@@ -704,6 +867,10 @@ export const CheckoutPage: React.FC = () => {
                     <p className="text-xs text-[#7A655C]">
                       {email} · {phone}
                     </p>
+                    <p className="text-xs text-[#6D1836] font-medium pt-1">
+                      {locationShipping.zone.name} · ETA {locationShipping.eta} ·{' '}
+                      {activeShippingFee === 0 ? 'Free Delivery' : formatINR(activeShippingFee)}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -734,8 +901,9 @@ export const CheckoutPage: React.FC = () => {
                 )}
 
                 <div className="p-4 rounded-xl bg-[#F8EFEA]/60 border border-[#E7C7CC] text-xs text-[#7A655C] leading-relaxed">
-                  Your pieces will be packed in archival plastic-free gift wrap and dispatched
-                  within {customRequest ? '5–8' : '2–5'} business days with insured tracking.
+                  Your pieces will be packed in archival plastic-free gift wrap and dispatched via{' '}
+                  <strong className="text-[#3E2F27]">{locationShipping.zone.name}</strong> (
+                  {locationShipping.eta}) with insured tracking.
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -767,7 +935,7 @@ export const CheckoutPage: React.FC = () => {
                     Step 3: Payment Method &amp; Verification
                   </h2>
                   <p className="text-xs text-[#7A655C] mt-1">
-                    Select your payment method and confirm billing details to place your order.
+                    Pay securely via Razorpay UPI, Cards &amp; NetBanking or select international checkout.
                   </p>
                 </div>
 
@@ -787,14 +955,31 @@ export const CheckoutPage: React.FC = () => {
                       className="mt-1 text-[#6D1836] focus:ring-[#6D1836]"
                     />
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-[#3E2F27]">
-                          Razorpay (UPI, Cards, NetBanking)
+                          Razorpay (UPI, GPay, PhonePe, Cards, NetBanking)
                         </span>
-                        <CreditCard className="w-4 h-4 text-[#6D1836]" />
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
+                              razorpayConfig.configured
+                                ? 'bg-[#FFF9F5] border-[#C9A66B] text-[#6D1836]'
+                                : 'bg-[#F8EFEA] border-[#E7C7CC] text-[#7A655C]'
+                            }`}
+                          >
+                            {razorpayConfig.configured
+                              ? razorpayConfig.mode === 'live'
+                                ? 'Live Gateway'
+                                : 'Test Gateway'
+                              : 'Keys Pending'}
+                          </span>
+                          <CreditCard className="w-4 h-4 text-[#6D1836]" />
+                        </div>
                       </div>
                       <p className="text-xs text-[#7A655C] mt-1">
-                        Instant UPI (GPay, PhonePe), Indian debit/credit cards &amp; wallets in INR.
+                        {razorpayConfig.configured
+                          ? 'Opens the official Razorpay payment modal with server-side HMAC signature verification.'
+                          : 'Studio Owner: add your Razorpay Live API Key ID & Live Secret Key in Admin → Settings to launch the live checkout popup.'}
                       </p>
                     </div>
                   </label>
@@ -827,18 +1012,20 @@ export const CheckoutPage: React.FC = () => {
                   </label>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
-                    UPI ID / Transaction Reference (Optional Verification Note)
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentRefInput}
-                    onChange={(e) => setPaymentRefInput(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. ananya@okaxis or UTR / last 4 digits"
-                  />
-                </div>
+                {(!razorpayConfig.configured || paymentMethod === 'stripe') && (
+                  <div>
+                    <label className="block text-xs font-medium text-[#7A655C] mb-1.5">
+                      UPI ID / Transaction Reference (Optional Verification Note)
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentRefInput}
+                      onChange={(e) => setPaymentRefInput(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. ananya@okaxis or UTR / last 4 digits"
+                    />
+                  </div>
+                )}
 
                 <label className="flex items-start gap-2.5 text-xs text-[#3E2F27] cursor-pointer bg-[#FFF9F5] border border-[#E7C7CC] rounded-xl p-3.5">
                   <input
@@ -848,21 +1035,26 @@ export const CheckoutPage: React.FC = () => {
                     className="mt-0.5 rounded border-[#E7C7CC] text-[#6D1836]"
                   />
                   <span>
-                    I verify my delivery address (<strong>{addressLine}, {city} {postalCode}</strong>) and authorize{' '}
-                    <strong>{formatINR(totalPayable)}</strong> via{' '}
+                    I verify my delivery address (
+                    <strong>
+                      {addressLine}, {city} {postalCode}
+                    </strong>
+                    ) and authorize <strong>{formatINR(totalPayable)}</strong> via{' '}
                     <strong>{paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'}</strong>.
                   </span>
                 </label>
 
-                <label className="inline-flex items-center gap-2 text-xs text-[#7A655C] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={simulateFailure}
-                    onChange={(e) => setSimulateFailure(e.target.checked)}
-                    className="rounded border-[#E7C7CC] text-[#6D1836]"
-                  />
-                  <span>Simulate payment decline state (prototype preview)</span>
-                </label>
+                {!razorpayConfig.configured && (
+                  <label className="inline-flex items-center gap-2 text-xs text-[#7A655C] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={simulateFailure}
+                      onChange={(e) => setSimulateFailure(e.target.checked)}
+                      className="rounded border-[#E7C7CC] text-[#6D1836]"
+                    />
+                    <span>Simulate payment decline state (prototype preview)</span>
+                  </label>
+                )}
 
                 {paymentError && (
                   <div className="flex items-start gap-2.5 p-4 rounded-xl bg-[#6D1836]/10 border border-[#6D1836]/30 text-xs text-[#541129]">
@@ -873,7 +1065,12 @@ export const CheckoutPage: React.FC = () => {
 
                 <div className="flex items-center gap-2 text-xs text-[#8C6B3F]">
                   <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>256-bit encrypted checkout · Complete address &amp; payment verified</span>
+                  <span>
+                    256-bit encrypted checkout ·{' '}
+                    {razorpayConfig.configured && paymentMethod === 'razorpay'
+                      ? 'Razorpay HMAC-SHA256 verified'
+                      : 'Complete address & payment verified'}
+                  </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -894,10 +1091,18 @@ export const CheckoutPage: React.FC = () => {
                     {processing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Authorizing {paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'}...</span>
+                        <span>
+                          {paymentMethod === 'razorpay' && razorpayConfig.configured
+                            ? 'Opening Razorpay Checkout...'
+                            : `Authorizing ${paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'}...`}
+                        </span>
                       </>
                     ) : (
-                      <span>Submit Order ({formatINR(totalPayable)}) for Studio Confirmation</span>
+                      <span>
+                        {paymentMethod === 'razorpay' && razorpayConfig.configured
+                          ? `Pay ${formatINR(totalPayable)} with Razorpay`
+                          : `Submit Order (${formatINR(totalPayable)}) for Studio Confirmation`}
+                      </span>
                     )}
                   </button>
                 </div>
@@ -939,10 +1144,14 @@ export const CheckoutPage: React.FC = () => {
                       {formatINR(customSubtotal)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[#7A655C]">
-                    <span>Insured Packaging &amp; Delivery</span>
-                    <span className="tabular-nums font-medium text-[#3E2F27]">
-                      {customShipping === 0 ? 'Complimentary' : formatINR(customShipping)}
+                  <div className="flex justify-between items-start gap-2 text-[#7A655C]">
+                    <span>Delivery ({locationShipping.zone.name})</span>
+                    <span className="tabular-nums font-medium text-[#C9A66B] shrink-0">
+                      {activeShippingFee === 0
+                        ? locationShipping.freeDeliveryCoupon
+                          ? `Free (${locationShipping.freeDeliveryCoupon.code})`
+                          : 'Complimentary'
+                        : formatINR(activeShippingFee)}
                     </span>
                   </div>
                   <div className="flex justify-between font-semibold text-base text-[#3E2F27] pt-2 border-t border-[#E7C7CC]">
@@ -952,7 +1161,12 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <OrderSummary discount={discountFromCart} />
+              <OrderSummary
+                discount={discountFromCart}
+                shippingFeeOverride={activeShippingFee}
+                shippingZoneLabel={locationShipping.zone.name}
+                freeDeliveryCouponCode={locationShipping.freeDeliveryCoupon?.code ?? null}
+              />
             )}
           </div>
         </div>

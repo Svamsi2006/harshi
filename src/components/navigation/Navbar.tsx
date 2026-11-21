@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { Search, User, ShoppingBag, Menu } from 'lucide-react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { Search, User, ShoppingBag, Menu, LogOut } from 'lucide-react';
 import { BrandLogo } from '../common/BrandLogo';
 import { useStore } from '../../context/StoreContext';
 import { MobileNavigation } from './MobileNavigation';
@@ -14,8 +14,9 @@ const NAV_ITEMS = [
 ];
 
 export const Navbar: React.FC = () => {
-  const { cartCount, openCartDrawer, openSearch, user, isAdmin } = useStore();
+  const { cartCount, openCartDrawer, openSearch, user, isAdmin, logout } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -93,6 +94,21 @@ export const Navbar: React.FC = () => {
             >
               <User className="w-[19px] h-[19px]" strokeWidth={1.75} />
             </Link>
+
+            {user && (
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="p-2.5 text-[#7A655C] hover:text-[#6D1836] hover:bg-[#F8EFEA] rounded-xl transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#6D1836]"
+                aria-label="Sign out"
+                title="Logout"
+              >
+                <LogOut className="w-[18px] h-[18px]" strokeWidth={1.75} />
+              </button>
+            )}
 
             <button
               type="button"
