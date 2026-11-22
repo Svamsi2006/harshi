@@ -60,13 +60,13 @@ export const AdminLoginPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) {
       setError('Please enter your admin email and password.');
       return;
     }
-    const res = loginWithCredentials(email, password);
+    const res = await loginWithCredentials(email, password);
     if (!res.ok) {
       setError(res.error || 'Authentication failed.');
       return;

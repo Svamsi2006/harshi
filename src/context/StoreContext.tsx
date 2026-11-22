@@ -24,8 +24,15 @@ import { isAdminEmail } from '../utils/admin';
 import {
   getBrowserSupabaseClient,
   getPublicAuthConfig,
+  resendSupabaseVerificationEmail,
+  sendSupabaseLoginOtp,
+  sendSupabasePasswordReset,
+  signInWithSupabasePassword,
   signOutBrowserSupabase,
+  signUpWithSupabaseEmail,
   startSupabaseGoogleSignIn,
+  updateSupabasePassword,
+  verifySupabaseEmailOtp,
 } from '../lib/supabaseAuth';
 
 export interface SupabaseSyncDiagnostics {
@@ -93,18 +100,46 @@ interface StoreContextValue {
   loginWithCredentials: (
     email: string,
     password: string
-  ) => { ok: boolean; user?: CustomerUser; error?: string };
+  ) => Promise<{
+    ok: boolean;
+    user?: CustomerUser;
+    needsVerification?: boolean;
+    error?: string;
+  }>;
   loginWithGoogle: (redirectPath?: string) => Promise<{ ok: boolean; error?: string }>;
+  sendLoginOtp: (
+    email: string,
+    redirectPath?: string
+  ) => Promise<{ ok: boolean; error?: string }>;
+  verifyEmailOtp: (params: {
+    email: string;
+    token: string;
+    mode: 'signup' | 'login';
+  }) => Promise<{ ok: boolean; user?: CustomerUser; error?: string }>;
+  resendVerificationEmail: (
+    email: string,
+    redirectPath?: string
+  ) => Promise<{ ok: boolean; error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  updateAccountPassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   googleAuthAvailable: boolean;
   authSyncing: boolean;
   loginAsDemoCustomer: () => void;
   loginAsDemoOwner: () => void;
-  registerCustomer: (data: {
-    fullName: string;
-    email: string;
-    phone: string;
-    password: string;
-  }) => { ok: boolean; error?: string };
+  registerCustomer: (
+    data: {
+      fullName: string;
+      email: string;
+      phone: string;
+      password: string;
+    },
+    redirectPath?: string
+  ) => Promise<{
+    ok: boolean;
+    user?: CustomerUser;
+    needsVerification?: boolean;
+    error?: string;
+  }>;
   updateProfile: (data: { fullName: string; email: string; phone: string }) => void;
   logout: () => void;
 
@@ -366,19 +401,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void refreshSupabaseSync();
   }, [refreshSupabaseSync]);
 
-  // Sync Supabase Google OAuth sessions automatically on load & auth state changes
-  useEffect(() => {
-    let active = true;
-    let unsubscribe: (() => void) | null = null;
-
-    const syncSessionToStore = async (accessToken: string, fallbackUser?: {
-      id: string;
-      email?: string | null;
-      phone?: string | null;
-      created_at?: string;
-      user_metadata?: Record<string, any>;
-    }) => {
-      if (!active) return;
+  const syncSupabaseSession = useCallback(
+    async (
+      accessToken: string,
+      fallbackUser?: {
+        id: string;
+        email?: string | null;
+        phone?: string | null;
+        created_at?: string;
+        user_metadata?: Record<string, any>;
+      }
+    ): Promise<CustomerUser | null> => {
       setAuthSyncing(true);
       try {
         const res = await fetch('/api/auth/supabase-sync', {
@@ -412,17 +445,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
         }
 
-        if (syncedUser && active) {
+        if (syncedUser) {
           mergeGuestCartIntoUser(syncedUser.id);
           storeService.setCurrentUser(syncedUser);
           setUser(syncedUser);
         }
+        return syncedUser;
       } catch {
-        // ignore network hiccups; local session remains intact
+        return null;
       } finally {
-        if (active) setAuthSyncing(false);
+        setAuthSyncing(false);
       }
-    };
+    },
+    [mergeGuestCartIntoUser]
+  );
+
+  // Sync Supabase Auth sessions (Google OAuth + Email/Password + OTP links) on load & state changes
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
 
     const initSupabaseAuth = async () => {
       const cfg = await getPublicAuthConfig();
@@ -433,17 +474,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!client || !active) return;
 
       const { data } = await client.auth.getSession();
-      if (data.session?.access_token && data.session.user) {
-        await syncSessionToStore(data.session.access_token, data.session.user);
+      if (data.session?.access_token && data.session.user && active) {
+        await syncSupabaseSession(data.session.access_token, data.session.user);
       }
 
       const { data: listener } = client.auth.onAuthStateChange((event, session) => {
+        if (!active) return;
         if (
           (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') &&
           session?.access_token &&
           session.user
         ) {
-          void syncSessionToStore(session.access_token, session.user);
+          void syncSupabaseSession(session.access_token, session.user);
+        } else if (event === 'SIGNED_OUT') {
+          storeService.setCurrentUser(null);
+          setUser(null);
+          setAdminPinUnlocked(false);
+          setAdminUnlockToken(null);
         }
       });
       unsubscribe = () => listener.subscription.unsubscribe();
@@ -455,7 +502,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       active = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [mergeGuestCartIntoUser]);
+  }, [syncSupabaseSession]);
 
   useEffect(() => {
     setCart(storeService.getCart(userId));
@@ -659,11 +706,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   const loginWithCredentials = useCallback(
-    (
+    async (
       email: string,
       password: string
-    ): { ok: boolean; user?: CustomerUser; error?: string } => {
+    ): Promise<{
+      ok: boolean;
+      user?: CustomerUser;
+      needsVerification?: boolean;
+      error?: string;
+    }> => {
       const normalized = email.trim().toLowerCase();
+
+      // Primary path: real Supabase Auth (persists in Supabase Auth + studio_users)
+      const sbRes = await signInWithSupabasePassword({ email: normalized, password });
+      if (sbRes.configured) {
+        if (!sbRes.ok) {
+          return {
+            ok: false,
+            needsVerification: sbRes.needsVerification,
+            error: sbRes.error || 'Unable to sign in.',
+          };
+        }
+        if (sbRes.session?.access_token) {
+          const synced = await syncSupabaseSession(
+            sbRes.session.access_token,
+            sbRes.user ?? undefined
+          );
+          if (synced) {
+            addToast(
+              `Welcome back, ${synced.fullName.split(' ')[0]}`,
+              isAdminEmail(synced.email) ? 'Studio Admin Workspace' : undefined,
+              'success'
+            );
+            return { ok: true, user: synced };
+          }
+        }
+        return { ok: false, error: 'Signed in, but could not load your profile. Please retry.' };
+      }
+
+      // Offline studio preview fallback (only used when SUPABASE_ANON_KEY is not configured)
       const users = storeService.getRegisteredUsers();
       const matched = users.find((u) => u.email.toLowerCase() === normalized);
       if (!matched) {
@@ -678,19 +759,87 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUser(cleanUser);
       addToast(
         `Welcome back, ${cleanUser.fullName.split(' ')[0]}`,
-        cleanUser.role === 'owner' ? 'Studio Admin Workspace' : undefined,
+        isAdminEmail(cleanUser.email) ? 'Studio Admin Workspace' : undefined,
         'success'
       );
       return { ok: true, user: cleanUser };
     },
-    [addToast, mergeGuestCartIntoUser]
+    [addToast, mergeGuestCartIntoUser, syncSupabaseSession]
   );
 
   const loginWithGoogle = useCallback(
     async (redirectPath = '/account'): Promise<{ ok: boolean; error?: string }> => {
       const res = await startSupabaseGoogleSignIn(redirectPath);
       if (!res.ok) {
-        addToast('Google Sign-In unavailable', res.error || 'Please configure Supabase Google Auth.', 'info');
+        addToast('Google Sign-In unavailable', res.error || 'Please try again.', 'info');
+      }
+      return res;
+    },
+    [addToast]
+  );
+
+  const sendLoginOtp = useCallback(
+    async (email: string, redirectPath = '/account'): Promise<{ ok: boolean; error?: string }> => {
+      const res = await sendSupabaseLoginOtp({ email, redirectPath });
+      if (res.ok) {
+        addToast('Verification code sent', `Check ${email.trim().toLowerCase()} for your OTP / link.`, 'success');
+      }
+      return { ok: res.ok, error: res.error };
+    },
+    [addToast]
+  );
+
+  const verifyEmailOtp = useCallback(
+    async (params: {
+      email: string;
+      token: string;
+      mode: 'signup' | 'login';
+    }): Promise<{ ok: boolean; user?: CustomerUser; error?: string }> => {
+      const res = await verifySupabaseEmailOtp(params);
+      if (!res.ok || !res.session?.access_token) {
+        return { ok: false, error: res.error || 'Verification failed. Please check the code.' };
+      }
+      const synced = await syncSupabaseSession(res.session.access_token, res.user ?? undefined);
+      if (!synced) {
+        return { ok: false, error: 'Email verified, but profile sync failed. Please sign in.' };
+      }
+      addToast(
+        'Email verified ✓',
+        `Welcome to varniks_atelier, ${synced.fullName.split(' ')[0]}`,
+        'success'
+      );
+      return { ok: true, user: synced };
+    },
+    [addToast, syncSupabaseSession]
+  );
+
+  const resendVerificationEmail = useCallback(
+    async (email: string, redirectPath = '/account'): Promise<{ ok: boolean; error?: string }> => {
+      const res = await resendSupabaseVerificationEmail({ email, redirectPath });
+      if (res.ok) {
+        addToast('Verification email resent', `Check ${email.trim().toLowerCase()} (and spam folder).`, 'success');
+      }
+      return res;
+    },
+    [addToast]
+  );
+
+  const sendPasswordReset = useCallback(
+    async (email: string): Promise<{ ok: boolean; error?: string }> => {
+      const res = await sendSupabasePasswordReset(email);
+      if (res.ok) {
+        addToast('Reset link sent', `Check ${email.trim().toLowerCase()} for password recovery.`, 'success');
+      }
+      return res;
+    },
+    [addToast]
+  );
+
+  const updateAccountPassword = useCallback(
+    async (newPassword: string): Promise<{ ok: boolean; error?: string }> => {
+      const res = await updateSupabasePassword(newPassword);
+      if (res.ok) {
+        addToast('Password updated', 'You can now sign in with your new password.', 'success');
       }
       return res;
     },
@@ -711,17 +860,67 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [addToast]);
 
   const registerCustomer = useCallback(
-    (data: {
-      fullName: string;
-      email: string;
-      phone: string;
-      password: string;
-    }): { ok: boolean; error?: string } => {
+    async (
+      data: {
+        fullName: string;
+        email: string;
+        phone: string;
+        password: string;
+      },
+      redirectPath = '/account'
+    ): Promise<{
+      ok: boolean;
+      user?: CustomerUser;
+      needsVerification?: boolean;
+      error?: string;
+    }> => {
+      const normalizedEmail = data.email.trim().toLowerCase();
+
+      // Primary path: real Supabase Auth signup with email verification / OTP
+      const sbRes = await signUpWithSupabaseEmail({
+        fullName: data.fullName,
+        email: normalizedEmail,
+        phone: data.phone,
+        password: data.password,
+        redirectPath,
+      });
+
+      if (sbRes.configured) {
+        if (!sbRes.ok) {
+          return { ok: false, error: sbRes.error || 'Could not create account.' };
+        }
+        if (sbRes.needsVerification) {
+          addToast(
+            'Verify your email',
+            `We sent a confirmation link & OTP to ${normalizedEmail}.`,
+            'info'
+          );
+          return { ok: true, needsVerification: true };
+        }
+        if (sbRes.session?.access_token) {
+          const synced = await syncSupabaseSession(
+            sbRes.session.access_token,
+            sbRes.user ?? undefined
+          );
+          if (synced) {
+            addToast(
+              'Welcome to varniks_atelier',
+              isAdminEmail(synced.email)
+                ? 'Your Studio Admin account is ready.'
+                : 'Your account has been created and saved.',
+              'success'
+            );
+            return { ok: true, user: synced, needsVerification: false };
+          }
+        }
+        return { ok: true, needsVerification: true };
+      }
+
+      // Offline studio preview fallback (only when Supabase Auth is not configured)
       const users = storeService.getRegisteredUsers();
-      if (users.some((u) => u.email.toLowerCase() === data.email.trim().toLowerCase())) {
+      if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
         return { ok: false, error: 'An account with this email already exists.' };
       }
-      const normalizedEmail = data.email.trim().toLowerCase();
       const newUser: CustomerUser = {
         id: `cust-${Date.now()}`,
         fullName: data.fullName.trim(),
@@ -735,14 +934,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUser(newUser);
       addToast(
         'Welcome to varniks_atelier',
-        newUser.role === 'owner'
+        isAdminEmail(newUser.email)
           ? 'Your Studio Admin account is ready.'
           : 'Your customer studio account is ready.',
         'success'
       );
-      return { ok: true };
+      return { ok: true, user: newUser, needsVerification: false };
     },
-    [addToast, mergeGuestCartIntoUser]
+    [addToast, mergeGuestCartIntoUser, syncSupabaseSession]
   );
 
   const updateProfile = useCallback(
@@ -1634,6 +1833,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dismissToast,
         loginWithCredentials,
         loginWithGoogle,
+        sendLoginOtp,
+        verifyEmailOtp,
+        resendVerificationEmail,
+        sendPasswordReset,
+        updateAccountPassword,
         googleAuthAvailable,
         authSyncing,
         loginAsDemoCustomer,
