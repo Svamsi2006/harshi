@@ -8,7 +8,7 @@ import { AccountSidebar } from '../../components/account/AccountSidebar';
 import { ProductGrid } from '../../components/product/ProductGrid';
 
 export const AccountPage: React.FC = () => {
-  const { user, isAdmin, products, updateProfile, wishlist, loginAsDemoCustomer } = useStore();
+  const { user, isAdmin, products, updateProfile, wishlist } = useStore();
   const [searchParams] = useSearchParams();
   const isSettingsTab = searchParams.get('tab') === 'settings';
 
@@ -36,15 +36,6 @@ export const AccountPage: React.FC = () => {
           actionLabel="Sign In"
           actionTo="/login"
         />
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#6D1836] hover:text-[#541129]"
-          >
-            Or explore immediately with the Demo Collector Account →
-          </button>
-        </div>
       </PageTransition>
     );
   }

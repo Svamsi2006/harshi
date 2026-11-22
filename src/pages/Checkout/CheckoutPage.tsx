@@ -58,7 +58,6 @@ export const CheckoutPage: React.FC = () => {
     user,
     authSyncing,
     loginWithGoogle,
-    googleAuthAvailable,
     cart,
     cartSubtotal,
     coupons,
@@ -260,12 +259,6 @@ export const CheckoutPage: React.FC = () => {
                 )}
                 <span>{googleAuthLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
               </button>
-
-              {!googleAuthAvailable && (
-                <p className="text-[11px] text-[#7A655C]">
-                  Google Sign-In activates once <span className="font-mono">SUPABASE_ANON_KEY</span> is configured.
-                </p>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <Link

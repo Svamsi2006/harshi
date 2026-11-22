@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, CheckCircle2, Sparkles, Loader2, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { sanitizeRedirectPath } from '../../lib/supabaseAuth';
 import { PageTransition } from '../../components/common/PageTransition';
@@ -70,11 +70,10 @@ function resolveRedirectTarget(
 export const LoginPage: React.FC = () => {
   const {
     user,
+    isAdmin,
     authSyncing,
     loginWithCredentials,
-    loginAsDemoCustomer,
     loginWithGoogle,
-    googleAuthAvailable,
   } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -109,12 +108,12 @@ export const LoginPage: React.FC = () => {
     } catch {
       // ignore
     }
-    const target = user.role === 'owner' && redirectTarget === '/account' ? '/admin' : redirectTarget;
+    const target = isAdmin && redirectTarget === '/account' ? '/admin' : redirectTarget;
     navigate(target, {
       replace: true,
       state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
     });
-  }, [user, navigate, redirectTarget, navState?.discount]);
+  }, [user, isAdmin, navigate, redirectTarget, navState?.discount]);
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -191,12 +190,6 @@ export const LoginPage: React.FC = () => {
           )}
           <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
         </button>
-
-        {!googleAuthAvailable && (
-          <p className="text-[11px] text-center text-[#7A655C]">
-            Studio Admin: add <span className="font-mono">SUPABASE_ANON_KEY</span> &amp; enable Google in Supabase Auth to activate one-click Google Sign-In.
-          </p>
-        )}
 
         <div className="relative flex items-center py-1">
           <div className="flex-1 border-t border-[#E7C7CC]" />
@@ -276,31 +269,7 @@ export const LoginPage: React.FC = () => {
         </button>
       </form>
 
-      <div className="pt-4 border-t border-[#E7C7CC] space-y-3">
-        <button
-          type="button"
-          onClick={() => {
-            loginAsDemoCustomer();
-            navigate(redirectTarget, {
-              state:
-                typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
-            });
-          }}
-          className="w-full py-2.5 px-4 rounded-xl bg-[#F8EFEA] hover:bg-[#E7C7CC] text-xs font-medium text-[#3E2F27] inline-flex items-center justify-center gap-1.5 transition-colors"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#6D1836]" />
-          <span>Sign in with Demo Collector Account (Ananya)</span>
-        </button>
-
-        <div className="text-center">
-          <Link
-            to="/admin/login"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#6D1836] hover:text-[#541129]"
-          >
-            <span>Studio Owner? Open Admin Login →</span>
-          </Link>
-        </div>
-
+      <div className="pt-4 border-t border-[#E7C7CC]">
         <p className="text-center text-xs text-[#7A655C]">
           New to varniks_atelier?{' '}
           <Link
@@ -321,7 +290,7 @@ export const LoginPage: React.FC = () => {
 };
 
 export const RegisterPage: React.FC = () => {
-  const { user, registerCustomer, loginWithGoogle, authSyncing } = useStore();
+  const { user, isAdmin, registerCustomer, loginWithGoogle, authSyncing } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -339,11 +308,12 @@ export const RegisterPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    navigate(redirectTarget, {
+    const target = isAdmin && redirectTarget === '/account' ? '/admin' : redirectTarget;
+    navigate(target, {
       replace: true,
       state: typeof navState?.discount === 'number' ? { discount: navState.discount } : undefined,
     });
-  }, [user, navigate, redirectTarget, navState?.discount]);
+  }, [user, isAdmin, navigate, redirectTarget, navState?.discount]);
 
   const handleGoogleSignIn = async () => {
     setError('');

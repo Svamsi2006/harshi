@@ -14,7 +14,6 @@ export const AccountOrdersPage: React.FC = () => {
     user,
     orders,
     commissions,
-    loginAsDemoCustomer,
   } = useStore();
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -37,15 +36,6 @@ export const AccountOrdersPage: React.FC = () => {
           actionLabel="Sign In"
           actionTo="/login"
         />
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#6D1836] hover:text-[#541129]"
-          >
-            Sign in with Demo Collector Account →
-          </button>
-        </div>
       </PageTransition>
     );
   }

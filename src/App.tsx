@@ -31,7 +31,6 @@ import { ContactPage } from './pages/Policies/ContactPage';
 import { FaqPage } from './pages/Policies/FaqPage';
 import { EmptyState } from './components/common/EmptyState';
 
-import { AdminLoginPage } from './pages/Admin/AdminLoginPage';
 import { AdminPinGate } from './components/admin/AdminPinGate';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminProductsPage } from './pages/Admin/AdminProductsPage';
@@ -104,9 +103,12 @@ const ScrollToTop: React.FC = () => {
 };
 
 const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAdmin, adminPinUnlocked } = useStore();
+  const { user, isAdmin, adminPinUnlocked } = useStore();
+  if (!user) {
+    return <Navigate to="/login?redirect=%2Fadmin" replace />;
+  }
   if (!isAdmin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/account" replace />;
   }
   if (!adminPinUnlocked) {
     return <AdminPinGate />;
@@ -165,8 +167,8 @@ const AppShell: React.FC = () => {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/faq" element={<FaqPage />} />
 
-          {/* Studio Owner Admin Routes */}
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+          {/* Studio Owner Admin Routes (Role-Based Access Only) */}
+          <Route path="/admin/login" element={<Navigate to="/login?redirect=%2Fadmin" replace />} />
           <Route
             path="/admin"
             element={

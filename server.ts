@@ -376,7 +376,6 @@ function maskApiKey(key: string): string {
 const DEFAULT_ADMIN_EMAILS = [
   'seelamvamsisivaganesh@gmail.com',
   'seelamharshi27@gmail.com',
-  'owner@varniksatelier.studio',
 ];
 
 const DEFAULT_ADMIN_PIN_SCRYPT =

@@ -15,7 +15,6 @@ export const AccountAddressesPage: React.FC = () => {
     updateAddress,
     deleteAddress,
     setDefaultAddress,
-    loginAsDemoCustomer,
   } = useStore();
 
   const [adding, setAdding] = useState(false);
@@ -30,15 +29,6 @@ export const AccountAddressesPage: React.FC = () => {
           actionLabel="Sign In"
           actionTo="/login"
         />
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#6D1836]"
-          >
-            Sign in with Demo Collector Account →
-          </button>
-        </div>
       </PageTransition>
     );
   }

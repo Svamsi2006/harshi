@@ -11,7 +11,7 @@ interface MobileNavigationProps {
 }
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onClose }) => {
-  const { user, cartCount, openCartDrawer, categories } = useStore();
+  const { user, isAdmin, cartCount, openCartDrawer, categories } = useStore();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,12 +112,12 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ isOpen, onCl
             <div className="p-5 border-t border-[#E7C7CC]/70 bg-[#F8EFEA] space-y-3">
               <div className="flex items-center gap-2.5">
                 <Link
-                  to={user ? '/account' : '/login'}
+                  to={isAdmin ? '/admin' : user ? '/account' : '/login'}
                   onClick={onClose}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFF9F5] border border-[#E7C7CC] text-sm font-medium text-[#3E2F27] hover:border-[#6D1836] transition-colors"
                 >
                   <User className="w-4 h-4 text-[#6D1836]" />
-                  <span>{user ? 'My Account' : 'Sign In'}</span>
+                  <span>{isAdmin ? 'Admin Studio' : user ? 'My Account' : 'Sign In'}</span>
                 </Link>
                 <button
                   type="button"

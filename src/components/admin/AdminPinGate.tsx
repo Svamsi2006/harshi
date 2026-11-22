@@ -120,7 +120,7 @@ export const AdminPinGate: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/');
   };
 
   return (

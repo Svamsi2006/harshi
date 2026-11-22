@@ -42,7 +42,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; title: string }>
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/');
   };
 
   const pendingOrdersCount = allOrders.filter((o) => o.orderStatus === 'Pending').length;

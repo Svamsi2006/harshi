@@ -28,7 +28,7 @@ const ACTION_META = {
 };
 
 export const AccountCartHistoryPage: React.FC = () => {
-  const { user, cartHistory, addToCart, loginAsDemoCustomer } = useStore();
+  const { user, products, cartHistory, addToCart } = useStore();
 
   if (!user) {
     return (
@@ -39,15 +39,6 @@ export const AccountCartHistoryPage: React.FC = () => {
           actionLabel="Sign In"
           actionTo="/login"
         />
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={loginAsDemoCustomer}
-            className="text-sm font-medium text-[#6D1836]"
-          >
-            Sign in with Demo Collector Account →
-          </button>
-        </div>
       </PageTransition>
     );
   }
@@ -82,7 +73,9 @@ export const AccountCartHistoryPage: React.FC = () => {
             ) : (
               <div className="bg-white border border-[#E7C7CC] rounded-2xl divide-y divide-[#E7C7CC] shadow-warm/40">
                 {cartHistory.map((entry) => {
-                  const product = getProductById(entry.productId);
+                  const product =
+                    products.find((p) => p.id === entry.productId) ??
+                    getProductById(entry.productId);
                   if (!product) return null;
                   const meta = ACTION_META[entry.action];
 

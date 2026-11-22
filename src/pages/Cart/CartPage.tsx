@@ -188,6 +188,14 @@ export const CartPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             {/* Cart Items List */}
             <div className="lg:col-span-8 bg-white border border-[#E7C7CC] rounded-2xl p-5 sm:p-6 shadow-warm/40">
+              <div className="flex items-center justify-between pb-3 mb-1 border-b border-[#E7C7CC]">
+                <h2 className="font-display text-lg font-medium text-[#3E2F27]">
+                  Selected Creations ({cartCount})
+                </h2>
+                <span className="text-xs text-[#7A655C]">
+                  Adjust quantity with − / +
+                </span>
+              </div>
               {cart.map((item) => (
                 <CartItemRow key={item.productId} item={item} />
               ))}
@@ -196,6 +204,28 @@ export const CartPage: React.FC = () => {
             {/* Summary Panel */}
             <aside className="lg:col-span-4 bg-white border border-[#E7C7CC] rounded-2xl p-6 shadow-warm space-y-5">
               <h2 className="font-display text-xl font-medium text-[#3E2F27]">Bag Summary</h2>
+
+              {/* Itemized Product Breakdown */}
+              <div className="space-y-1.5 text-xs border-b border-[#E7C7CC] pb-3.5">
+                {cart.map((item) => {
+                  const prod = products.find((p) => p.id === item.productId);
+                  if (!prod) return null;
+                  return (
+                    <div
+                      key={item.productId}
+                      className="flex items-start justify-between gap-2 text-[#7A655C]"
+                    >
+                      <span className="truncate">
+                        {prod.name}{' '}
+                        <span className="text-[#3E2F27] font-medium">× {item.quantity}</span>
+                      </span>
+                      <span className="tabular-nums text-[#3E2F27] font-medium shrink-0">
+                        {formatINR(prod.price * item.quantity)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
 
               {/* Free Delivery Progress / Coupon Notice */}
               {locationShipping.zone.id !== 'international' && (

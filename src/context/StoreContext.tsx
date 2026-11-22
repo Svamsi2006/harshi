@@ -194,7 +194,7 @@ const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<CustomerUser | null>(() => storeService.getCurrentUser());
   const userId = user?.id ?? null;
-  const isAdmin = Boolean(user && (user.role === 'owner' || isAdminEmail(user.email)));
+  const isAdmin = Boolean(user && isAdminEmail(user.email));
   const [adminPinUnlocked, setAdminPinUnlocked] = useState(false);
   const [, setAdminUnlockToken] = useState<string | null>(null);
 
@@ -563,9 +563,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateCartQuantity = useCallback(
     (productId: string, quantity: number) => {
-      const product = getProductById(productId);
-      if (!product) return;
       if (quantity <= 0) {
+        const product = getProductById(productId);
         setCart((prev) => {
           const item = prev.find((i) => i.productId === productId);
           if (item) recordCartHistory(productId, item.quantity, 'removed');
@@ -573,9 +572,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           storeService.saveCart(next, userId);
           return next;
         });
+        if (product) {
+          addToast('Removed from bag', product.name, 'info');
+        }
         return;
       }
-      const clamped = Math.min(quantity, product.stock);
+      const product = getProductById(productId);
+      if (!product) return;
+      const maxStock = product.stock > 0 ? product.stock : quantity;
+      const clamped = Math.min(quantity, maxStock);
       setCart((prev) => {
         const next = prev.map((i) =>
           i.productId === productId ? { ...i, quantity: clamped } : i
@@ -584,7 +589,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [getProductById, recordCartHistory, userId]
+    [addToast, getProductById, recordCartHistory, userId]
   );
 
   const removeFromCart = useCallback(
